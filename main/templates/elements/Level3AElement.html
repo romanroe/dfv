@@ -1,0 +1,19 @@
+<h3>Level 3 A</h3>
+{{ timestamp }}
+<br>
+{{ source }}
+
+<form hx-post="{% url "dfv_demos_level3a" %}">
+    <div>
+        <button name="action" value="2">Refresh 2</button>
+    </div>
+    <div>
+        <button name="action" value="3a">Refresh 3A</button>
+    </div>
+    <div>
+        <button name="action" value="3a_3b">Refresh 3A + 3B</button>
+    </div>
+    <div>
+        <button name="action" value="replace">Replace with 3B</button>
+    </div>
+</form>

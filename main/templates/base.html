@@ -1,0 +1,37 @@
+{% load static %}
+{% load django_htmx %}
+{% load dfv %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+
+    <title>{% block title %}Django Template{% endblock %}</title>
+
+    <link rel="stylesheet" href="https://classless.de/classless.css">
+
+    <style>
+        input.invalid {
+            border: 1px solid red;
+        }
+    </style>
+
+    <script src="https://unpkg.com/htmx.org@1.8.4"
+            integrity="sha384-wg5Y/JwF7VxGk4zLsJEcAojRtlVp1FKKdGy1qN+OMtdq72WRvX/EdRdqg/LOhYeV"
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js"></script>
+
+    {% dfv %}
+
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body hx-ext="morph">
+{% block body %}{% endblock %}
+</body>
+
+</html>

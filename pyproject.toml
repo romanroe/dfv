@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "dfv"
+version = "0.5.0"
+description = "Django Function Views"
+authors = ["Roman Roelofsen <romanroe@gmail.com>"]
+include = ["dfv"]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+django = "^4.1.7"
+django-htmx = "^1.14.0"
+lxml = "^4.9.2"
+wrapt = "^1.15.0"
+typeguard = "*"
+
+[tool.poetry.dev-dependencies]
+whitenoise = "^6.5.0"
+django-debug-toolbar = "*"
+django-browser-reload = "^1.7.0"
+django-widget-tweaks = "^1.4.12"
+django-extensions = "^3.1.5"
+black = {extras = ["d"], version = "^23.1.0"}
+django-click = "^2.3.0"
+ruff = "^0.0.280"
+mypy = "1.4.1"
+coverage = "^7.2.1"
+psycopg = "^3.1.9"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line_length = 88
+extend_exclude = "migrations"
+
+[tool.ruff]
+exclude = [
+    "**/migrations/*",
+]
+select = [
+    "F", # Pyflakes
+    "E", # pycodestyle error
+    "W",
+    "N", # pep8-naming
+    "DJ", # Flake8 Django
+    "I", # isort
+    "RET", # return type
+    "SLF001", # private-member-access
+    "RUF100", # unused-noqa
+]
+
+ignore = [
+    "E501", # handled by black"
+    "RET504",
+    "RET501",
+    "I001",
+]
+
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+show_error_context = true
+ignore_missing_imports = true
+check_untyped_defs = true
+plugins = []
+#plugins = ["mypy_django_plugin.main"]
+exclude = [
+    'migrations/',
+]
+
+#[tool.django-stubs]
+#django_settings_module = "project.settings"
