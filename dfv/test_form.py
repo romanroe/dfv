@@ -31,7 +31,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
 
         self.assertRaisesRegex(
             Exception,
-            "argument type for handle_form\(\) must be a subclass of django.forms.BaseForm",
+            r"argument type for handle_form\(\) must be a subclass of django.forms.BaseForm",
             test,
         )
 
@@ -43,7 +43,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
 
         self.assertRaisesRegex(
             Exception,
-            "argument type for handle_form\(\) must be a subclass of django.forms.BaseForm",
+            r"argument type for handle_form\(\) must be a subclass of django.forms.BaseForm",
             test,
         )
 

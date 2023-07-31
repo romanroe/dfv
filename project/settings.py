@@ -218,9 +218,3 @@ LOGGING = {
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
-
-#######################################################################################
-print("  PYTHON =", sys.version, sys.executable)
-print("  DEBUG =", DEBUG)
-print("  BASE_DIR =", BASE_DIR)
-print("  DATA_DIR =", DATA_DIR)

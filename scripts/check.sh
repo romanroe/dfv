@@ -21,6 +21,9 @@ echo "\n-------------------- Validate Templates --------------------"
 echo "\n-------------------- MyPy --------------------"
 ./.venv/bin/mypy . || failed=1
 
+printf "\n-------------------- Tests --------------------\n"
+./.venv/bin/python manage.py test --parallel 20 || failed=1
+
 if [ "$failed" -ne 0 ] ; then
     echo "!!! CHECK FAILED !!!"
     exit 1

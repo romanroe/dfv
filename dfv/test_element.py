@@ -110,3 +110,12 @@ class ElementDecoratorTestCase(TestCase):
         parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(result))
         self.assertEqual(parsed.attrib["id"], "viewfn")
         self.assertEqual(parsed.text.strip(), "123")
+
+    def test_classes(self):
+        @element(classes="foo bar")
+        def viewfn(_request):
+            return HttpResponse("body")
+
+        response = viewfn(self.factory.get("/"))
+        parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
+        self.assertEqual(parsed.attrib["class"], "foo bar")

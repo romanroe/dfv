@@ -37,13 +37,19 @@ class ElementResponse(wrapt.ObjectProxy):
         tag="div",
         hx_target="this",
         hx_swap="outerHTML",
+        classes: Optional[str] = None,
         no_element_wrap=False,
     ):
         if not no_element_wrap:
             attr_id = f"id='{element_id}'" if element_id is not None else ""
             attr_hx_target = f"hx-target='{hx_target}'" if hx_target else ""
             attr_hx_swap = f"hx-swap='{hx_swap}'" if hx_swap else ""
-            new_content = f"<{tag} {attr_id} {attr_hx_target} {attr_hx_swap}>{response_to_str(response)}</{tag}>"
+            attr_classes = f"class='{classes}'" if classes else ""
+            new_content = (
+                f"""<{tag} {attr_id} {attr_hx_target} {attr_hx_swap} {attr_classes}>"""
+                f"""{response_to_str(response)}"""
+                f"""</{tag}>"""
+            )
             response.content = bytes(new_content, "UTF-8")
 
         super().__init__(response)
@@ -66,6 +72,7 @@ def element(
     tag="div",
     hx_target="this",
     hx_swap="outerHTML",
+    classes: Optional[str] = None,
     handle_args=True,
     login_required=False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
@@ -73,7 +80,7 @@ def element(
         id = element_id if isinstance(element_id, str) else f.__name__
 
         if handle_args:
-            f = _handle_args()(f)
+            f = _inject_args()(f)
 
         if login_required:
             f = auth_decorators.login_required()(f)
@@ -81,7 +88,6 @@ def element(
         @functools.wraps(f)
         def inner(*args: P.args, **kwargs: P.kwargs) -> HttpResponse:
             response = f(*args, **kwargs)
-            response.streaming
             if not response["Content-Type"].startswith("text/html"):
                 return response
 
@@ -89,7 +95,12 @@ def element(
                 return response
 
             return ElementResponse(
-                response, element_id=id, tag=tag, hx_target=hx_target, hx_swap=hx_swap
+                response,
+                element_id=id,
+                tag=tag,
+                hx_target=hx_target,
+                hx_swap=hx_swap,
+                classes=classes,
             )
 
         return inner
@@ -150,7 +161,7 @@ def inject_args(
 
 
 # alias, to allow parameters to be named handle_args
-_handle_args = inject_args
+_inject_args = inject_args
 
 
 @dataclasses.dataclass
