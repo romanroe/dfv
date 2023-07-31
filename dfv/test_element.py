@@ -106,7 +106,6 @@ class ElementDecoratorTestCase(TestCase):
             )
 
         result = viewfn(self.factory.get("/"))
-        print("result", result)
         parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(result))
         self.assertEqual(parsed.attrib["id"], "viewfn")
         self.assertEqual(parsed.text.strip(), "123")
