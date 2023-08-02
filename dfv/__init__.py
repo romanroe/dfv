@@ -74,14 +74,19 @@ def element(
     hx_swap="outerHTML",
     classes: Optional[str] = None,
     handle_args=True,
+    decorators: Optional[list[Callable]] = None,
     login_required=False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(f: Callable[P, HttpResponse]) -> Callable[P, HttpResponse]:
         id = element_id if isinstance(element_id, str) else f.__name__
-        f = view(handle_args)(f)
+        f = view(
+            handle_args=handle_args,
+            decorators=decorators,
+            login_required=login_required,
+        )(f)
 
-        if login_required:
-            f = auth_decorators.login_required()(f)
+        # if login_required:
+        #     f = auth_decorators.login_required()(f)
 
         @functools.wraps(f)
         def inner(*args: P.args, **kwargs: P.kwargs) -> HttpResponse:
@@ -148,10 +153,24 @@ def get_view_fn_call_stack_from_request(
     return call_stack
 
 
-def view(handle_args=True) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def view(
+    *,
+    decorators: Optional[list[Callable]] = None,
+    login_required=False,
+    handle_args=True,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    if decorators is None:
+        decorators = []
+    if login_required:
+        decorators = [auth_decorators.login_required(), *decorators]
+
     def decorator(fn: Callable[P, R]) -> Callable[P, R]:
         if handle_args:
             fn = _inject_args()(fn)
+
+        if decorators is not None:
+            for d in reversed(decorators):
+                fn = d(fn)
 
         @functools.wraps(fn)
         def inner(*args: P.args, **kwargs: P.kwargs) -> R:
