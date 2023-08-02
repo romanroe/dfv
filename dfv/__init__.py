@@ -78,9 +78,7 @@ def element(
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(f: Callable[P, HttpResponse]) -> Callable[P, HttpResponse]:
         id = element_id if isinstance(element_id, str) else f.__name__
-
-        if handle_args:
-            f = _inject_args()(f)
+        f = view(handle_args)(f)
 
         if login_required:
             f = auth_decorators.login_required()(f)
@@ -125,6 +123,81 @@ def swap_oob(
 
 
 ################################################################################
+### view
+################################################################################
+
+
+@typing.overload
+def get_view_fn_call_stack_from_request(request: HttpRequest) -> list[Callable]:
+    ...
+
+
+@typing.overload
+def get_view_fn_call_stack_from_request(
+    request: HttpRequest, create: bool
+) -> Optional[list[Callable]]:
+    ...
+
+
+def get_view_fn_call_stack_from_request(
+    request: HttpRequest, create=True
+) -> Optional[list[Callable]]:
+    call_stack = getattr(request, "__dfv_view_fn_call_stack", None)
+    call_stack = [] if call_stack is None and create else call_stack
+    setattr(request, "__dfv_view_fn_call_stack", call_stack)
+    return call_stack
+
+
+def view(handle_args=True) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    def decorator(fn: Callable[P, R]) -> Callable[P, R]:
+        if handle_args:
+            fn = _inject_args()(fn)
+
+        @functools.wraps(fn)
+        def inner(*args: P.args, **kwargs: P.kwargs) -> R:
+            view_request: HttpRequest = args[0]
+            stack = get_view_fn_call_stack_from_request(view_request)
+            try:
+                stack.append(fn)
+                return fn(*args, **kwargs)
+            finally:
+                stack.pop()
+
+        return inner
+
+    return decorator
+
+
+def is_view_fn_request_target(request: HttpRequest):
+    stack = get_view_fn_call_stack_from_request(request, create=False)
+    return stack is None or len(stack) == 1
+
+
+def is_head(request: HttpRequest):
+    return is_view_fn_request_target(request) and request.method == "HEAD"
+
+
+def is_get(request: HttpRequest):
+    return request.method == "GET"
+
+
+def is_post(request: HttpRequest):
+    return is_view_fn_request_target(request) and request.method == "POST"
+
+
+def is_put(request: HttpRequest):
+    return is_view_fn_request_target(request) and request.method == "PUT"
+
+
+def is_patch(request: HttpRequest):
+    return is_view_fn_request_target(request) and request.method == "PATCH"
+
+
+def is_delete(request: HttpRequest):
+    return is_view_fn_request_target(request) and request.method == "DELETE"
+
+
+################################################################################
 ### inject_args
 ################################################################################
 
@@ -138,7 +211,9 @@ def inject_args(
         parameters: list[inspect.Parameter] = list(
             inspect.signature(fn).parameters.values()
         )
-        injected_params = _extract_injected_params(parameters, auto_param, auto_form)
+        injected_params = _extract_injected_params(
+            fn, parameters, auto_param, auto_form
+        )
         arg_names = [p.name for p in parameters]
 
         @functools.wraps(fn)
@@ -168,6 +243,7 @@ _inject_args = inject_args
 class InjectedParam:
     name: str = dataclasses.field(init=False)
     target_type: type = dataclasses.field(init=False)
+    view_fn: Callable[[Any], Any] = dataclasses.field(init=False)
 
     def check(self):
         pass
@@ -181,7 +257,12 @@ class InjectedParam:
         pass
 
 
-def _setup_injected_param(ip: InjectedParam, name: str, parameter: inspect.Parameter):
+def _setup_injected_param(
+    view_fn: Callable[[Any], Any],
+    ip: InjectedParam,
+    name: str,
+    parameter: inspect.Parameter,
+):
     ip.name = name
     ip.target_type = (
         parameter.annotation
@@ -194,11 +275,13 @@ def _setup_injected_param(ip: InjectedParam, name: str, parameter: inspect.Param
         and parameter.default.default is not None
         else str
     )
+    ip.view_fn = view_fn
     ip.check()
     return ip
 
 
 def _extract_injected_params(
+    view_fn: Callable[[Any], Any],
     parameters: list[inspect.Parameter],
     auto_param: bool | Literal["get"] | Literal["post"],
     auto_form: Optional[bool | str] = True,
@@ -215,7 +298,7 @@ def _extract_injected_params(
     for arg in parameters:
         if isinstance(arg.default, InjectedParam):
             ip: InjectedParam = arg.default
-            result[ip.name] = _setup_injected_param(ip, arg.name, arg)
+            result[ip.name] = _setup_injected_param(view_fn, ip, arg.name, arg)
 
         # elif arg.default == inspect.Parameter.empty:
         else:
@@ -233,26 +316,27 @@ def _extract_injected_params(
                         "You can only have one Form argument in a view function."
                     )
                 found_form_arg = True
-                result[arg.name] = _setup_injected_param(handle_form(), arg.name, arg)
+                result[arg.name] = _setup_injected_param(
+                    view_fn, handle_form(), arg.name, arg
+                )
             # from here, handle get and post params
             elif auto_param is True:
                 result[arg.name] = _setup_injected_param(
-                    InjectedParamQuery(default=default_value), arg.name, arg
+                    view_fn, InjectedParamQuery(default=default_value), arg.name, arg
                 )
             elif auto_param == "get":
                 result[arg.name] = _setup_injected_param(
-                    InjectedParamQueryGet(default=default_value), arg.name, arg
+                    view_fn, InjectedParamQueryGet(default=default_value), arg.name, arg
                 )
             elif auto_param == "post":
                 result[arg.name] = _setup_injected_param(
-                    InjectedParamQueryPost(default=default_value), arg.name, arg
+                    view_fn,
+                    InjectedParamQueryPost(default=default_value),
+                    arg.name,
+                    arg,
                 )
 
     return result
-
-
-def _get_request_from_args(args: list[Any]) -> HttpRequest:
-    return args[0]
 
 
 ################################################################################
@@ -443,25 +527,5 @@ def querydict_key_removed(querydict: dict, key) -> QueryDict:
     return temp
 
 
-def is_head(request: HttpRequest):
-    return request.method == "HEAD"
-
-
-def is_get(request: HttpRequest):
-    return request.method == "GET"
-
-
-def is_post(request: HttpRequest):
-    return request.method == "POST"
-
-
-def is_put(request: HttpRequest):
-    return request.method == "PUT"
-
-
-def is_patch(request: HttpRequest):
-    return request.method == "PATCH"
-
-
-def is_delete(request: HttpRequest):
-    return request.method == "DELETE"
+def _get_request_from_args(args: list[Any]) -> HttpRequest:
+    return args[0]
