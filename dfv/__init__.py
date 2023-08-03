@@ -189,7 +189,13 @@ def view(
 
 def is_view_fn_request_target(request: HttpRequest):
     stack = get_view_fn_call_stack_from_request(request, create=False)
-    return stack is None or len(stack) == 1
+    if stack is None:
+        raise Exception("This function can only be called from within a DFV view.")
+    if len(stack) != 1:
+        return False
+
+    called_view: Callable = stack[0]
+    return called_view.__qualname__ == request.resolver_match.func.__qualname__
 
 
 def is_head(request: HttpRequest):
@@ -197,7 +203,7 @@ def is_head(request: HttpRequest):
 
 
 def is_get(request: HttpRequest):
-    return request.method == "GET"
+    return is_view_fn_request_target(request) and request.method == "GET"
 
 
 def is_post(request: HttpRequest):

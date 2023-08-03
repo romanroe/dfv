@@ -2,9 +2,11 @@ from unittest import TestCase
 
 from django.http import HttpResponse
 from django.test import RequestFactory
+from django.urls import path, resolve
 
 import dfv
 from dfv import get_view_fn_call_stack_from_request
+from dfv.testutils import create_resolved_request
 
 
 class ViewDecoratorTestCase(TestCase):
@@ -36,7 +38,7 @@ class ViewDecoratorTestCase(TestCase):
             assert dfv.is_view_fn_request_target(request)
             return HttpResponse("")
 
-        view1(self.factory.post("/"))
+        view1(create_resolved_request(view1))
 
     def test_is_view_fn_target_nested_view(self):
         @dfv.view()
@@ -50,11 +52,25 @@ class ViewDecoratorTestCase(TestCase):
             assert not dfv.is_view_fn_request_target(request)
             return HttpResponse("")
 
-        view1(self.factory.post("/"))
+        urlpatterns = (path("view/", view1, name="a view"),)
+        resolved = resolve("/view/", urlconf=urlpatterns)
+        test_request = self.factory.post("/view")
+        test_request.resolver_match = resolved
+        view1(test_request)
 
     def test_is_view_fn_target_raw_view(self):
         def view1(request):
             assert dfv.is_view_fn_request_target(request)
             return HttpResponse("")
 
-        view1(self.factory.post("/"))
+        urlpatterns = (path("view/", view1, name="a view"),)
+        resolved = resolve("/view/", urlconf=urlpatterns)
+        test_request = self.factory.post("/view")
+        test_request.resolver_match = resolved
+
+        def fn():
+            view1(test_request)
+
+        self.assertRaisesRegex(
+            Exception, "This function can only be called from within a DFV view.", fn
+        )

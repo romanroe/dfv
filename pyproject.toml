@@ -7,7 +7,7 @@ include = ["dfv"]
 
 [tool.poetry.dependencies]
 python = ">=3.9"
-django = "^4.1.7"
+django = "4.2.4"
 django-htmx = "^1.14.0"
 lxml = "^4.9.2"
 wrapt = "^1.15.0"
@@ -21,7 +21,7 @@ django-widget-tweaks = "^1.4.12"
 django-extensions = "^3.1.5"
 black = {extras = ["d"], version = "^23.1.0"}
 django-click = "^2.3.0"
-ruff = "^0.0.280"
+ruff = "0.0.282"
 mypy = "1.4.1"
 coverage = "^7.2.1"
 psycopg = "^3.1.9"

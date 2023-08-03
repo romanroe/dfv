@@ -7,7 +7,8 @@ from django import forms
 from django.http import HttpResponse
 from django.test import RequestFactory
 
-from dfv import inject_args, param, param_get, param_post
+from dfv import inject_args, param, param_get, param_post, view
+from dfv.testutils import create_resolved_request
 
 
 class ParamsToArgsDecoratorTestCase(TestCase):
@@ -18,7 +19,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         django.setup()
 
     def test_without_type_annotation(self):
-        @inject_args()
+        @view()
         def viewfn(
             _request,
             p1=param_get(),
@@ -32,7 +33,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         self.assertEqual(result.status_code, 200)
 
     def test_param_default_defines_target_type(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1=param(default=123)):
             self.assertEqual(p1, 999)
             return HttpResponse("")
@@ -41,7 +42,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         self.assertEqual(result.status_code, 200)
 
     def test_missing_param_raises_exception(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1=param_get()):
             self.assertEqual(p1, 1)
 
@@ -51,7 +52,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         self.assertRaises(Exception, test)
 
     def test_optional(self):
-        @inject_args()
+        @view()
         def viewfn(
             _request,
             p1: str | None = param_get(),
@@ -63,7 +64,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/"))
 
     def test_optional_with_type_conversion(self):
-        @inject_args()
+        @view()
         def viewfn(
             _request,
             p1: Optional[int] = param_get(),
@@ -73,14 +74,14 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=1"))
 
     def test_type_conversion_int(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: int = param_get()):
             self.assertEqual(p1, 1)
 
         viewfn(self.factory.get("/?p1=1"))
 
     def test_type_conversion_float(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: float = param_get()):
             self.assertEqual(p1, 1.1)
             self.assertEqual(type(p1), float)
@@ -88,7 +89,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=1.1"))
 
     def test_type_conversion_bool(self):
-        @inject_args()
+        @view()
         def viewfn(
             _request,
             p1: bool = param_get(),
@@ -102,7 +103,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=false&p2=False&p3"))
 
     def test_type_conversion_list_unannotated(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: list = param_get()):
             self.assertEqual(type(p1), list)
             self.assertTrue("a" in p1)
@@ -111,7 +112,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=a&p1=b"))
 
     def test_type_conversion_list_annotated(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: list[int] = param_get()):
             self.assertEqual(type(p1), list)
             self.assertTrue(1 in p1)
@@ -120,7 +121,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=1&p1=2"))
 
     def test_post(self):
-        @inject_args()
+        @view()
         def viewfn(
             _request,
             p1: str = param_post(),
@@ -132,28 +133,28 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.post("/", {"p1": "a", "p2": "b"}))
 
     def test_get_and_post_order(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: str = param()):
             self.assertEqual(p1, "a")
 
         viewfn(self.factory.post("/?p1=a", {"p1": "b"}))
 
     def test_function_call_arg_overrides_param(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: str = param()):
             self.assertEqual(p1, "b")
 
         viewfn(self.factory.get("/?p1=a"), "b")
 
     def test_function_call_kwarg_overrides_param(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: str = param()):
             self.assertEqual(p1, "b")
 
         viewfn(self.factory.get("/?p1=a"), p1="b")
 
     def test_param_consume_true(self):
-        @inject_args()
+        @view()
         def viewfn(request, p1: str = param()):
             self.assertEqual(p1, "a")
             self.assertNotIn("p1", request.GET)
@@ -161,7 +162,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=a"))
 
     def test_param_consume_false(self):
-        @inject_args()
+        @view()
         def viewfn(request, p1: str = param(consume=False)):
             self.assertEqual(p1, "a")
             self.assertIn("p1", request.GET)
@@ -169,7 +170,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=a"))
 
     def test_param_consume_get(self):
-        @inject_args()
+        @view()
         def viewfn(request, p1: str = param_get()):
             self.assertEqual(p1, "a")
             self.assertNotIn("p1", request.GET)
@@ -177,7 +178,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.get("/?p1=a"))
 
     def test_param_consume_post(self):
-        @inject_args()
+        @view()
         def viewfn(request, p1: str = param_post()):
             self.assertEqual(p1, "a")
             self.assertNotIn("p1", request.POST)
@@ -185,7 +186,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
         viewfn(self.factory.post("/", {"p1": "a"}))
 
     def test_auto_default_value(self):
-        @inject_args()
+        @view()
         def viewfn(_request, p1: str = param(default="a")):
             self.assertEqual(p1, "a")
 
@@ -253,12 +254,12 @@ class ParamsToArgsDecoratorTestCase(TestCase):
             p1 = forms.TextInput()
             p2 = forms.TextInput()
 
-        @inject_args()
+        @view()
         def viewfn(_request, form: TestForm):
             self.assertEqual(type(form), TestForm)
 
         untyped_viewfn = typing.cast(Any, viewfn)
-        untyped_viewfn(self.factory.post("/", {"p1": "a", "p2": "b"}))
+        untyped_viewfn(create_resolved_request(viewfn, "POST", {"p1": "a", "p2": "b"}))
 
     def test_multiple_form_params_raises_exception(self):
         class TestForm(forms.Form):
@@ -266,7 +267,7 @@ class ParamsToArgsDecoratorTestCase(TestCase):
             p2 = forms.TextInput()
 
         def test():
-            @inject_args()
+            @view()
             def viewfn(_request, _form1: TestForm, _form2: TestForm):
                 pass
 
