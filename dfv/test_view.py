@@ -58,6 +58,24 @@ class ViewDecoratorTestCase(TestCase):
         test_request.resolver_match = resolved
         view1(test_request)
 
+    def test_is_view_fn_target_nested_view_ignore_target(self):
+        @dfv.view()
+        def view1(request):
+            assert dfv.is_post(request)
+            view2(request)
+            return HttpResponse("")
+
+        @dfv.view()
+        def view2(request):
+            assert dfv.is_post(request, ignore_resolved_view=True)
+            return HttpResponse("")
+
+        urlpatterns = (path("view/", view1, name="a view"),)
+        resolved = resolve("/view/", urlconf=urlpatterns)
+        test_request = self.factory.post("/view")
+        test_request.resolver_match = resolved
+        view1(test_request)
+
     def test_is_view_fn_target_raw_view(self):
         def view1(request):
             assert dfv.is_view_fn_request_target(request)

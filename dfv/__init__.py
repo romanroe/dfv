@@ -189,7 +189,7 @@ def view(
 
 def is_view_fn_request_target(request: HttpRequest):
     stack = get_view_fn_call_stack_from_request(request, create=False)
-    if stack is None:
+    if stack is None or len(stack) == 0:
         raise Exception("This function can only be called from within a DFV view.")
     if len(stack) != 1:
         return False
@@ -198,28 +198,40 @@ def is_view_fn_request_target(request: HttpRequest):
     return called_view.__qualname__ == request.resolver_match.func.__qualname__
 
 
-def is_head(request: HttpRequest):
-    return is_view_fn_request_target(request) and request.method == "HEAD"
+def is_head(request: HttpRequest, ignore_resolved_view=True):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "HEAD"
 
 
-def is_get(request: HttpRequest):
-    return is_view_fn_request_target(request) and request.method == "GET"
+def is_get(request: HttpRequest, ignore_resolved_view=True):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "GET"
 
 
-def is_post(request: HttpRequest):
-    return is_view_fn_request_target(request) and request.method == "POST"
+def is_post(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "POST"
 
 
-def is_put(request: HttpRequest):
-    return is_view_fn_request_target(request) and request.method == "PUT"
+def is_put(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "PUT"
 
 
-def is_patch(request: HttpRequest):
-    return is_view_fn_request_target(request) and request.method == "PATCH"
+def is_patch(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "PATCH"
 
 
-def is_delete(request: HttpRequest):
-    return is_view_fn_request_target(request) and request.method == "DELETE"
+def is_delete(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "DELETE"
 
 
 ################################################################################
