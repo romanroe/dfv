@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dfv"
-version = "0.10.0"
+version = "0.11.0"
 description = "Django Function Views"
 authors = ["Roman Roelofsen <romanroe@gmail.com>"]
 license = "MIT"
@@ -86,7 +86,8 @@ check_untyped_defs = true
 plugins = []
 #plugins = ["mypy_django_plugin.main"]
 exclude = [
-    'migrations/',
+    "migrations/",
+    "docs",
 ]
 
 #[tool.django-stubs]

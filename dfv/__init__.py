@@ -5,7 +5,7 @@ import json
 import typing
 import uuid
 from types import NoneType
-from typing import Any, Callable, Literal, Optional, ParamSpec, TypeVar
+from typing import Any, Callable, Literal, Optional, TypeVar
 
 import lxml.html
 import wrapt
@@ -15,10 +15,9 @@ from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.template.response import TemplateResponse
 from django.utils.safestring import mark_safe, SafeString
 
-P = ParamSpec("P")
-R = TypeVar("R")
 T = TypeVar("T")
 
+VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 
 ################################################################################
 ### element
@@ -76,8 +75,8 @@ def element(
     handle_args=True,
     decorators: Optional[list[Callable]] = None,
     login_required=False,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    def decorator(f: Callable[P, HttpResponse]) -> Callable[P, HttpResponse]:
+) -> Callable[[VIEW_FN], VIEW_FN]:
+    def decorator(f: VIEW_FN) -> VIEW_FN:
         id = element_id if isinstance(element_id, str) else f.__name__
         f = view(
             handle_args=handle_args,
@@ -89,7 +88,7 @@ def element(
         #     f = auth_decorators.login_required()(f)
 
         @functools.wraps(f)
-        def inner(*args: P.args, **kwargs: P.kwargs) -> HttpResponse:
+        def inner(*args, **kwargs) -> HttpResponse:
             response = f(*args, **kwargs)
             if not response["Content-Type"].startswith("text/html"):
                 return response
@@ -106,7 +105,7 @@ def element(
                 classes=classes,
             )
 
-        return inner
+        return typing.cast(VIEW_FN, inner)
 
     return decorator
 
@@ -158,13 +157,13 @@ def view(
     decorators: Optional[list[Callable]] = None,
     login_required=False,
     handle_args=True,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
+) -> Callable[[VIEW_FN], VIEW_FN]:
     if decorators is None:
         decorators = []
     if login_required:
         decorators = [auth_decorators.login_required(), *decorators]
 
-    def decorator(fn: Callable[P, R]) -> Callable[P, R]:
+    def decorator(fn: VIEW_FN) -> VIEW_FN:
         if handle_args:
             fn = _inject_args()(fn)
 
@@ -173,7 +172,7 @@ def view(
                 fn = d(fn)
 
         @functools.wraps(fn)
-        def inner(*args: P.args, **kwargs: P.kwargs) -> R:
+        def inner(*args, **kwargs) -> HttpResponse:
             view_request: HttpRequest = args[0]
             stack = get_view_fn_call_stack_from_request(view_request)
             try:
@@ -182,7 +181,7 @@ def view(
             finally:
                 stack.pop()
 
-        return inner
+        return typing.cast(VIEW_FN, inner)
 
     return decorator
 
@@ -243,8 +242,8 @@ def inject_args(
     *,
     auto_param: bool | Literal["get", "post"] = False,
     auto_form: Optional[bool | str] = True,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    def decorator(fn: Callable[P, R]) -> Callable[P, R]:
+) -> Callable[[VIEW_FN], VIEW_FN]:
+    def decorator(fn: VIEW_FN) -> VIEW_FN:
         parameters: list[inspect.Parameter] = list(
             inspect.signature(fn).parameters.values()
         )
@@ -254,7 +253,7 @@ def inject_args(
         arg_names = [p.name for p in parameters]
 
         @functools.wraps(fn)
-        def inner(*args: P.args, **kwargs: P.kwargs) -> R:
+        def inner(*args, **kwargs) -> HttpResponse:
             supplied_args = arg_names[: len(args)]
             for name, ip in injected_params.items():
                 if name not in kwargs and name not in supplied_args:
@@ -263,11 +262,11 @@ def inject_args(
                         _get_request_from_args(typing.cast(Any, args)), kwargs[name]
                     )
                     if replace_response is not None:
-                        return typing.cast(R, replace_response)
+                        return replace_response
 
             return fn(*args, **kwargs)
 
-        return inner
+        return typing.cast(VIEW_FN, inner)
 
     return decorator
 
