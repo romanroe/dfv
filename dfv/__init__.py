@@ -15,16 +15,136 @@ from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.template.response import TemplateResponse
 from django.utils.safestring import mark_safe, SafeString
 
+# P = ParamSpec("P")
 T = TypeVar("T")
 
 VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
+
+
+################################################################################
+### view
+################################################################################
+
+
+@typing.overload
+def get_view_fn_call_stack_from_request(request: HttpRequest) -> list[Callable]:
+    ...
+
+
+@typing.overload
+def get_view_fn_call_stack_from_request(
+    request: HttpRequest, create: bool
+) -> Optional[list[Callable]]:
+    ...
+
+
+def get_view_fn_call_stack_from_request(
+    request: HttpRequest, create=True
+) -> Optional[list[Callable]]:
+    call_stack = getattr(request, "__dfv_view_fn_call_stack", None)
+    call_stack = [] if call_stack is None and create else call_stack
+    setattr(request, "__dfv_view_fn_call_stack", call_stack)
+    return call_stack
+
+
+class ViewResponse(wrapt.ObjectProxy):
+    def __str__(self):
+        return response_to_str(self)
+
+
+def view(
+    *,
+    decorators: Optional[list[Callable]] = None,
+    login_required=False,
+    handle_args=True,
+) -> Callable[[VIEW_FN], VIEW_FN]:
+    if decorators is None:
+        decorators = []
+
+    if login_required:
+        decorators = [auth_decorators.login_required(), *decorators]
+
+    def decorator(fn: VIEW_FN) -> VIEW_FN:
+        if handle_args:
+            fn = _inject_args()(fn)
+
+        if decorators is not None:
+            for d in reversed(decorators):
+                fn = d(fn)
+
+        @functools.wraps(fn)
+        def inner(*args, **kwargs) -> HttpResponse:
+            view_request: HttpRequest = args[0]
+            stack = get_view_fn_call_stack_from_request(view_request)
+            try:
+                stack.append(fn)
+                result = fn(*args, **kwargs)
+                return (
+                    ViewResponse(result)
+                    if not isinstance(result, ViewResponse)
+                    else result
+                )
+            finally:
+                stack.pop()
+
+        return typing.cast(VIEW_FN, inner)
+
+    return decorator
+
+
+def is_view_fn_request_target(request: HttpRequest):
+    stack = get_view_fn_call_stack_from_request(request, create=False)
+    if stack is None or len(stack) == 0:
+        raise Exception("This function can only be called from within a DFV view.")
+    if len(stack) != 1:
+        return False
+
+    called_view: Callable = stack[0]
+    return called_view.__qualname__ == request.resolver_match.func.__qualname__
+
+
+def is_head(request: HttpRequest, ignore_resolved_view=True):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "HEAD"
+
+
+def is_get(request: HttpRequest, ignore_resolved_view=True):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "GET"
+
+
+def is_post(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "POST"
+
+
+def is_put(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "PUT"
+
+
+def is_patch(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "PATCH"
+
+
+def is_delete(request: HttpRequest, ignore_resolved_view=False):
+    return (
+        ignore_resolved_view or is_view_fn_request_target(request)
+    ) and request.method == "DELETE"
+
 
 ################################################################################
 ### element
 ################################################################################
 
 
-class ElementResponse(wrapt.ObjectProxy):
+class ElementResponse(ViewResponse):
     @staticmethod
     def empty() -> HttpResponse:
         return ElementResponse(HttpResponse(), None, no_element_wrap=True)
@@ -84,9 +204,6 @@ def element(
             login_required=login_required,
         )(f)
 
-        # if login_required:
-        #     f = auth_decorators.login_required()(f)
-
         @functools.wraps(f)
         def inner(*args, **kwargs) -> HttpResponse:
             response = f(*args, **kwargs)
@@ -124,113 +241,6 @@ def swap_oob(
     parsed.attrib["hx-swap-oob"] = f"{hx_swap_oob_method}:#{id}"
     response.content += lxml.html.tostring(parsed)
     return response
-
-
-################################################################################
-### view
-################################################################################
-
-
-@typing.overload
-def get_view_fn_call_stack_from_request(request: HttpRequest) -> list[Callable]:
-    ...
-
-
-@typing.overload
-def get_view_fn_call_stack_from_request(
-    request: HttpRequest, create: bool
-) -> Optional[list[Callable]]:
-    ...
-
-
-def get_view_fn_call_stack_from_request(
-    request: HttpRequest, create=True
-) -> Optional[list[Callable]]:
-    call_stack = getattr(request, "__dfv_view_fn_call_stack", None)
-    call_stack = [] if call_stack is None and create else call_stack
-    setattr(request, "__dfv_view_fn_call_stack", call_stack)
-    return call_stack
-
-
-def view(
-    *,
-    decorators: Optional[list[Callable]] = None,
-    login_required=False,
-    handle_args=True,
-) -> Callable[[VIEW_FN], VIEW_FN]:
-    if decorators is None:
-        decorators = []
-    if login_required:
-        decorators = [auth_decorators.login_required(), *decorators]
-
-    def decorator(fn: VIEW_FN) -> VIEW_FN:
-        if handle_args:
-            fn = _inject_args()(fn)
-
-        if decorators is not None:
-            for d in reversed(decorators):
-                fn = d(fn)
-
-        @functools.wraps(fn)
-        def inner(*args, **kwargs) -> HttpResponse:
-            view_request: HttpRequest = args[0]
-            stack = get_view_fn_call_stack_from_request(view_request)
-            try:
-                stack.append(fn)
-                return fn(*args, **kwargs)
-            finally:
-                stack.pop()
-
-        return typing.cast(VIEW_FN, inner)
-
-    return decorator
-
-
-def is_view_fn_request_target(request: HttpRequest):
-    stack = get_view_fn_call_stack_from_request(request, create=False)
-    if stack is None or len(stack) == 0:
-        raise Exception("This function can only be called from within a DFV view.")
-    if len(stack) != 1:
-        return False
-
-    called_view: Callable = stack[0]
-    return called_view.__qualname__ == request.resolver_match.func.__qualname__
-
-
-def is_head(request: HttpRequest, ignore_resolved_view=True):
-    return (
-        ignore_resolved_view or is_view_fn_request_target(request)
-    ) and request.method == "HEAD"
-
-
-def is_get(request: HttpRequest, ignore_resolved_view=True):
-    return (
-        ignore_resolved_view or is_view_fn_request_target(request)
-    ) and request.method == "GET"
-
-
-def is_post(request: HttpRequest, ignore_resolved_view=False):
-    return (
-        ignore_resolved_view or is_view_fn_request_target(request)
-    ) and request.method == "POST"
-
-
-def is_put(request: HttpRequest, ignore_resolved_view=False):
-    return (
-        ignore_resolved_view or is_view_fn_request_target(request)
-    ) and request.method == "PUT"
-
-
-def is_patch(request: HttpRequest, ignore_resolved_view=False):
-    return (
-        ignore_resolved_view or is_view_fn_request_target(request)
-    ) and request.method == "PATCH"
-
-
-def is_delete(request: HttpRequest, ignore_resolved_view=False):
-    return (
-        ignore_resolved_view or is_view_fn_request_target(request)
-    ) and request.method == "DELETE"
 
 
 ################################################################################

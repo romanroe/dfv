@@ -15,6 +15,14 @@ class ViewDecoratorTestCase(TestCase):
     def setUp(self) -> None:
         self.factory = RequestFactory()
 
+    def test_str(self):
+        @dfv.view()
+        def view1(_request):
+            return HttpResponse("response")
+
+        response = str(view1(self.factory.get("/")))
+        self.assertEqual(response, "response")
+
     def test_call_stack(self):
         @dfv.view()
         def view1(request):
