@@ -12,7 +12,10 @@ DATA_DIR = BASE_DIR / "data"
 
 SECRET_KEY = "django-insecure-+3tty1@(pff3fc^dn259a+ms6a#_(5f#@ss#h6s%21)qhh1x&0"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+STORAGES = {
+    "default": "django.core.files.storage.FileSystemStorage",
+    "static": "whitenoise.storage.CompressedStaticFilesStorage",
+}
 
 #######################################################################################
 
@@ -144,8 +147,6 @@ EMAIL_USE_TLS = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
-
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 STATIC_URL = "static/"
 STATICFILES_DIRS: list[str] = [
