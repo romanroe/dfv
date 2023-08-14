@@ -4,11 +4,11 @@ from typing import Any
 
 import pytest
 from django import forms
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory
 from django.urls import path, resolve
 
-from dfv import handle_form, view
+from dfv import handle_form, inject_args, view
 from dfv.testutils import create_resolved_request
 
 
@@ -83,6 +83,20 @@ def test_form_post():
         return HttpResponse("")
 
     viewfn(create_resolved_request(viewfn, "POST", {"p1": "a", "p2": "b"}))
+
+
+def test_initial():
+    @inject_args(auto_param=True)
+    def initial_fn(_request: HttpRequest, p1: str, p2: str):
+        return {"p1": f"initial {p1}", "p2": f"initial {p2}"}
+
+    @view()
+    def viewfn(_request, form: TwoFieldForm = handle_form(initial=initial_fn)):
+        assert form.initial["p1"] == "initial ia"
+        assert form.initial["p2"] == "initial ib"
+        return HttpResponse("")
+
+    viewfn(create_resolved_request(viewfn, "GET", {"p1": "ia", "p2": "ib"}))
 
 
 def test_form_patch(rf: RequestFactory):

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="enabledOnReformat" value="true" />
     <option name="enabledOnSave" value="true" />
     <option name="sdkUUID" value="7e3a9bf5-bd74-400a-bfe9-782e3a14b00a" />
   </component>

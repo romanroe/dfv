@@ -511,7 +511,10 @@ def _convert_value_to_type(values: list[typing.Any], target_type: type):
 ################################################################################
 
 
+@dataclasses.dataclass
 class InjectedParamForm(InjectedParam):
+    initial: Optional[Callable[..., Any]] = dataclasses.field(default=None)
+
     def check(self):
         if not issubclass(self.target_type, forms.BaseForm):
             raise Exception(
@@ -520,14 +523,20 @@ class InjectedParamForm(InjectedParam):
 
     def get_value(self, args: Any, kwargs: dict[str, Any]):
         request = _get_request_from_args(args)
+        form_kwargs = {}
+        if self.initial is not None:
+            form_kwargs["initial"] = self.initial(request)
+
         if is_post(request):
-            form = self.target_type(data=request.POST, files=request.FILES)
+            form = self.target_type(
+                data=request.POST, files=request.FILES, **form_kwargs
+            )
         elif request.content_type == "application/json":
             new_post_dict = typing.cast(QueryDict, request.POST).copy()
             new_post_dict.update(json.loads(request.body))
-            form = self.target_type(data=new_post_dict)
+            form = self.target_type(data=new_post_dict, **form_kwargs)
         else:
-            form = self.target_type()
+            form = self.target_type(**form_kwargs)
         return form
 
     def replace_response(
@@ -557,8 +566,8 @@ class InjectedParamForm(InjectedParam):
         return None
 
 
-def handle_form() -> Any:
-    return InjectedParamForm()
+def handle_form(*, initial: Optional[Callable[..., Any]] = None) -> Any:
+    return InjectedParamForm(initial=initial)
 
 
 ################################################################################

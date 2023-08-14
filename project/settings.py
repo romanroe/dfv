@@ -13,8 +13,12 @@ DATA_DIR = BASE_DIR / "data"
 SECRET_KEY = "django-insecure-+3tty1@(pff3fc^dn259a+ms6a#_(5f#@ss#h6s%21)qhh1x&0"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 STORAGES = {
-    "default": "django.core.files.storage.FileSystemStorage",
-    "static": "whitenoise.storage.CompressedStaticFilesStorage",
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
 }
 
 #######################################################################################
