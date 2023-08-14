@@ -87,11 +87,15 @@ def test_form_post():
 
 def test_initial():
     @inject_args(auto_param=True)
-    def initial_fn(_request: HttpRequest, p1: str, p2: str):
-        return {"p1": f"initial {p1}", "p2": f"initial {p2}"}
+    def kwargs_factory(_request: HttpRequest, p1: str, p2: str):
+        return {
+            "initial": {"p1": f"initial {p1}", "p2": f"initial {p2}"},
+        }
 
     @view()
-    def viewfn(_request, form: TwoFieldForm = handle_form(initial=initial_fn)):
+    def viewfn(
+        _request, form: TwoFieldForm = handle_form(kwargs_factory=kwargs_factory)
+    ):
         assert form.initial["p1"] == "initial ia"
         assert form.initial["p2"] == "initial ib"
         return HttpResponse("")

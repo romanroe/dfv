@@ -513,7 +513,9 @@ def _convert_value_to_type(values: list[typing.Any], target_type: type):
 
 @dataclasses.dataclass
 class InjectedParamForm(InjectedParam):
-    initial: Optional[Callable[..., Any]] = dataclasses.field(default=None)
+    kwargs_factory: Optional[Callable[..., dict[str, Any]]] = dataclasses.field(
+        default=None
+    )
 
     def check(self):
         if not issubclass(self.target_type, forms.BaseForm):
@@ -523,9 +525,9 @@ class InjectedParamForm(InjectedParam):
 
     def get_value(self, args: Any, kwargs: dict[str, Any]):
         request = _get_request_from_args(args)
-        form_kwargs = {}
-        if self.initial is not None:
-            form_kwargs["initial"] = self.initial(request)
+        form_kwargs = (
+            self.kwargs_factory(request) if self.kwargs_factory is not None else {}
+        )
 
         if is_post(request):
             form = self.target_type(
@@ -566,8 +568,10 @@ class InjectedParamForm(InjectedParam):
         return None
 
 
-def handle_form(*, initial: Optional[Callable[..., Any]] = None) -> Any:
-    return InjectedParamForm(initial=initial)
+def handle_form(
+    *, kwargs_factory: Optional[Callable[..., dict[str, Any]]] = None
+) -> Any:
+    return InjectedParamForm(kwargs_factory=kwargs_factory)
 
 
 ################################################################################
