@@ -11,6 +11,7 @@ import lxml.html
 import wrapt
 from django import forms
 from django.contrib.auth import decorators as auth_decorators
+from django.forms import BaseForm
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.template.response import TemplateResponse
 from django.utils.safestring import mark_safe, SafeString
@@ -92,7 +93,7 @@ def view(
     return decorator
 
 
-def is_view_fn_request_target(request: HttpRequest):
+def is_view_fn_request_target(request: HttpRequest) -> bool:
     stack = get_view_fn_call_stack_from_request(request, create=False)
     if stack is None or len(stack) == 0:
         raise Exception("This function can only be called from within a DFV view.")
@@ -100,40 +101,42 @@ def is_view_fn_request_target(request: HttpRequest):
         return False
 
     called_view: Callable = stack[0]
-    return called_view.__qualname__ == request.resolver_match.func.__qualname__
+    return str(called_view.__qualname__) == str(
+        request.resolver_match.func.__qualname__
+    )
 
 
-def is_head(request: HttpRequest, ignore_resolved_view=True):
+def is_head(request: HttpRequest, ignore_resolved_view=True) -> bool:
     return (
         ignore_resolved_view or is_view_fn_request_target(request)
     ) and request.method == "HEAD"
 
 
-def is_get(request: HttpRequest, ignore_resolved_view=True):
+def is_get(request: HttpRequest, ignore_resolved_view=True) -> bool:
     return (
         ignore_resolved_view or is_view_fn_request_target(request)
     ) and request.method == "GET"
 
 
-def is_post(request: HttpRequest, ignore_resolved_view=False):
+def is_post(request: HttpRequest, ignore_resolved_view=False) -> bool:
     return (
         ignore_resolved_view or is_view_fn_request_target(request)
     ) and request.method == "POST"
 
 
-def is_put(request: HttpRequest, ignore_resolved_view=False):
+def is_put(request: HttpRequest, ignore_resolved_view=False) -> bool:
     return (
         ignore_resolved_view or is_view_fn_request_target(request)
     ) and request.method == "PUT"
 
 
-def is_patch(request: HttpRequest, ignore_resolved_view=False):
+def is_patch(request: HttpRequest, ignore_resolved_view=False) -> bool:
     return (
         ignore_resolved_view or is_view_fn_request_target(request)
     ) and request.method == "PATCH"
 
 
-def is_delete(request: HttpRequest, ignore_resolved_view=False):
+def is_delete(request: HttpRequest, ignore_resolved_view=False) -> bool:
     return (
         ignore_resolved_view or is_view_fn_request_target(request)
     ) and request.method == "DELETE"
@@ -509,6 +512,20 @@ def _convert_value_to_type(values: list[typing.Any], target_type: type):
 ################################################################################
 ### form
 ################################################################################
+
+T_FORM = TypeVar("T_FORM", bound=BaseForm)
+
+
+def create_form(request: HttpRequest, form_class: type[T_FORM], **kwargs) -> T_FORM:
+    if is_get(request):
+        form = form_class(**kwargs)
+    else:
+        form = form_class(data=request.POST, files=request.FILES, **kwargs)
+    return typing.cast(T_FORM, form)
+
+
+def is_valid_submit(request: HttpRequest, form: BaseForm) -> bool:
+    return is_post(request) and form.is_valid()
 
 
 @dataclasses.dataclass

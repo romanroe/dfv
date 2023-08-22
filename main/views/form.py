@@ -3,7 +3,7 @@ from django.http import HttpRequest
 from django.shortcuts import render
 from django.urls import path, reverse
 
-from dfv import element, handle_form
+from dfv import create_form, element, handle_form, is_valid_submit
 
 
 class FormPageForm(forms.Form):
@@ -31,11 +31,9 @@ def form_page(request):
 
 
 @element()
-def form_element(
-    request: HttpRequest,
-    form: FormPageForm = handle_form(),
-):
-    if form.is_valid():
+def form_element(request: HttpRequest):
+    form = create_form(request, FormPageForm)
+    if is_valid_submit(request, form):
         print("form.cleaned_data", form.cleaned_data)
 
     return render(

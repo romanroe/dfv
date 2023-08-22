@@ -18,10 +18,40 @@
         }
     </style>
 
-    <script src="https://unpkg.com/htmx.org@1.8.4"
-            integrity="sha384-wg5Y/JwF7VxGk4zLsJEcAojRtlVp1FKKdGy1qN+OMtdq72WRvX/EdRdqg/LOhYeV"
-            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.4" integrity="sha384-zUfuhFKKZCbHTY6aRR46gxiqszMk5tcHjsVFxnUo8VMus4kHGVdIYVbOYYNlKmHV" crossorigin="anonymous"></script>
+
     <script src="https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js"></script>
+
+    <script type="text/javascript">
+        htmx.defineExtension('merge', {
+            isInlineSwap: function (swapStyle) {
+                return swapStyle === 'merge';
+            },
+            handleSwap: function (swapStyle, target, fragment) {
+                window.t = target;
+
+                console.log("target", target);
+                console.log("fragment", fragment);
+                
+                return;
+
+                let result = undefined;
+                if (swapStyle === 'merge' || swapStyle === 'merge:outerHTML') {
+                    result = Idiomorph.morph(target, fragment.children, {
+                        morphStyle: 'outerHTML',
+                        ignoreActive: true
+                    });
+                } else if (swapStyle === 'merge:innerHTML') {
+                    result = Idiomorph.morph(target, fragment.children, {
+                        morphStyle: 'innerHTML',
+                        {#ignoreActive: true#}
+                    });
+                }
+                return result;
+            }
+        });
+    </script>
+
 
     {% dfv %}
 
@@ -30,7 +60,7 @@
     {% block head %}{% endblock %}
 </head>
 
-<body hx-ext="morph">
+<body hx-ext="merge">
 {% block body %}{% endblock %}
 </body>
 
