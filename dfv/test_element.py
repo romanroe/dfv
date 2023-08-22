@@ -48,6 +48,19 @@ def test_append_swap_oob():
     assert parsed[0].attrib["hx-swap-oob"] == "outerHTML:#oob"
 
 
+def test_append_swap_oob_multiple():
+    original = HttpResponse("<div id='foo'>foo</foo>")
+    oob1 = HttpResponse("<span id='oob1'>oob1</span>")
+    oob2 = HttpResponse("<span id='oob2'>oob2</span>")
+    response = swap_oob(original, [oob1, oob2])
+    parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
+    assert parsed.attrib["id"] == "foo"
+    assert parsed[0].attrib["id"] == "oob1"
+    assert parsed[0].attrib["hx-swap-oob"] == "outerHTML:#oob1"
+    assert parsed[1].attrib["id"] == "oob2"
+    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#oob2"
+
+
 def test_append_swap_oob_exception_if_additional_has_more_than_one_root_element():
     original = HttpResponse("<div id='foo'>foo</foo>")
     oob = HttpResponse("<span id='oob1'>oob1</span><span id='oob2'>oob2</span>")
