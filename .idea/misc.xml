@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="enabledOnSave" value="true" />
-    <option name="sdkUUID" value="7e3a9bf5-bd74-400a-bfe9-782e3a14b00a" />
+    <option name="sdkUUID" value="7730c0ea-95ce-42b8-808d-12ebc13f401b" />
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_20" project-jdk-name="Poetry (dfv)" project-jdk-type="Python SDK">
-    <output url="file://$PROJECT_DIR$/out" />
-  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="Poetry (dfv)" project-jdk-type="Python SDK" />
 </project>

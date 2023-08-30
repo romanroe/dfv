@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dfv"
-version = "0.11.5"
+version = "0.12.0"
 description = "Django Function Views"
 authors = ["Roman Roelofsen <romanroe@gmail.com>"]
 license = "MIT"
@@ -86,11 +86,22 @@ ignore = [
 python_files = "tests.py test_*.py *_tests.py *_test.py"
 DJANGO_SETTINGS_MODULE = "project.settings"
 FAIL_INVALID_TEMPLATE_VARS = true
+#addopts = "-n 5"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+
+]
+norecursedirs = [
+    ".venv",
+    "*_cache",
+    "build",
+    "data"
+]
 
 [tool.pytest-watcher]
 now = true
 delay = 0.2
-runner_args = ["-n", "5", "--lf", "--nf"]
+runner_args = ["-n", "0", "--no-header"]
 
 [tool.mypy]
 warn_return_any = true

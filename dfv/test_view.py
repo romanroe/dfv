@@ -6,6 +6,7 @@ from django.urls import path, resolve
 import dfv
 from dfv import get_view_fn_call_stack_from_request
 from dfv.testutils import create_resolved_request
+from dfv.view_stack import is_view_fn_request_target
 
 
 def test_str(rf: RequestFactory):
@@ -38,7 +39,7 @@ def test_call_stack(rf: RequestFactory):
 def test_is_view_fn_target():
     @dfv.view()
     def view1(request):
-        assert dfv.is_view_fn_request_target(request)
+        assert is_view_fn_request_target(request)
         return HttpResponse("")
 
     view1(create_resolved_request(view1))
@@ -47,13 +48,13 @@ def test_is_view_fn_target():
 def test_is_view_fn_target_nested_view(rf: RequestFactory):
     @dfv.view()
     def view1(request):
-        assert dfv.is_view_fn_request_target(request)
+        assert is_view_fn_request_target(request)
         view2(request)
         return HttpResponse("")
 
     @dfv.view()
     def view2(request):
-        assert not dfv.is_view_fn_request_target(request)
+        assert not is_view_fn_request_target(request)
         return HttpResponse("")
 
     urlpatterns = (path("view/", view1, name="a view"),)
@@ -84,7 +85,7 @@ def test_is_view_fn_target_nested_view_ignore_target(rf: RequestFactory):
 
 def test_is_view_fn_target_raw_view(rf: RequestFactory):
     def view1(request):
-        assert dfv.is_view_fn_request_target(request)
+        assert is_view_fn_request_target(request)
         return HttpResponse("")
 
     urlpatterns = (path("view/", view1, name="a view"),)
