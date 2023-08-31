@@ -5,7 +5,9 @@ from django.http import HttpResponse
 from django.template.response import TemplateResponse
 from django.test import RequestFactory
 
-from dfv import element, ElementResponse, response_to_str, swap_oob
+from dfv import element, ElementResponse
+from dfv.htmx_features import swap_oob
+from dfv.utils import response_to_str
 
 
 def _assert_default_values(response: HttpResponse):

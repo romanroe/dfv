@@ -36,13 +36,14 @@ def get_view_fn_call_stack_from_request_or_raise(
 
 def is_view_fn_request_target(request: HttpRequest) -> bool:
     stack = get_view_fn_call_stack_from_request_or_raise(request)
-    if len(stack) != 1:
-        return False
-
-    called_view: Callable = stack[0]
-    return str(called_view.__qualname__) == str(
-        request.resolver_match.func.__qualname__
-    )
+    return len(stack) == 1
+    # if len(stack) != 1:
+    #     return False
+    #
+    # called_view: Callable = stack[0]
+    # return str(called_view.__qualname__) == str(
+    #     request.resolver_match.func.__qualname__
+    # )
 
 
 def is_head(request: HttpRequest, ignore_resolved_view=True) -> bool:

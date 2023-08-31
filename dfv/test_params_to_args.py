@@ -83,7 +83,8 @@ def test_type_conversion_float(rf: RequestFactory):
     @view()
     def viewfn(_request, p1: float = param_get()):
         assert p1 == 1.1
-        assert type(p1) == float
+        # assert type(p1) == float
+        assert isinstance(p1, float)
 
     viewfn(rf.get("/?p1=1.1"))
 

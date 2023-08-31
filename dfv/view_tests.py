@@ -4,9 +4,11 @@ from django.test import RequestFactory
 from django.urls import path, resolve
 
 import dfv
-from dfv import get_view_fn_call_stack_from_request
 from dfv.testutils import create_resolved_request
-from dfv.view_stack import is_view_fn_request_target
+from dfv.view_stack import (
+    get_view_fn_call_stack_from_request,
+    is_view_fn_request_target,
+)
 
 
 def test_str(rf: RequestFactory):
