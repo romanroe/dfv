@@ -3,7 +3,7 @@ from typing import Callable, Literal, Optional, TypeAlias
 from django.http import HttpRequest, HttpResponse
 from django_htmx.http import push_url
 
-from dfv.htmx_features import swap_oob
+from dfv.htmx import swap_oob
 from dfv.view_stack import get_view_fn_call_stack_from_request_or_raise
 
 

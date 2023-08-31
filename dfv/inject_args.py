@@ -8,11 +8,10 @@ from types import NoneType
 from typing import Any, Callable, cast, get_args, get_origin, Literal, Optional, TypeVar
 
 from django import forms
-from django.forms import BaseForm
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 
 from dfv.utils import _get_request_from_args, querydict_key_removed
-from dfv.view_stack import is_get, is_patch, is_post
+from dfv.view_stack import is_patch, is_post
 
 VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 
@@ -276,21 +275,6 @@ def _convert_value_to_type(values: list[Any], target_type: type):
         return uuid.UUID(value)
 
     raise ValueError(f"Unsupported type: {target_type} for value: {value}")
-
-
-T_FORM = TypeVar("T_FORM", bound=BaseForm)
-
-
-def create_form(request: HttpRequest, form_class: type[T_FORM], **kwargs) -> T_FORM:
-    if is_get(request):
-        form = form_class(**kwargs)
-    else:
-        form = form_class(data=request.POST, files=request.FILES, **kwargs)
-    return cast(T_FORM, form)
-
-
-def is_valid_submit(request: HttpRequest, form: BaseForm) -> bool:
-    return is_post(request) and form.is_valid()
 
 
 @dataclasses.dataclass

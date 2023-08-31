@@ -4,7 +4,8 @@ from django.http import HttpRequest
 from django.shortcuts import render
 from django.urls import path
 
-from dfv import element, param, swap_oob
+from dfv import element, param
+from dfv.htmx import swap_oob
 
 
 def level1_page(request: HttpRequest):

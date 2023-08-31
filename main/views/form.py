@@ -3,7 +3,8 @@ from django.http import HttpRequest
 from django.shortcuts import render
 from django.urls import path, reverse
 
-from dfv import create_form, element, is_valid_submit
+from dfv import element
+from dfv.form import create_form, is_valid_submit
 
 
 class FormPageForm(forms.Form):
