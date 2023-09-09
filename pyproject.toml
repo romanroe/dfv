@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dfv"
-version = "0.13.0"
+version = "0.14.0"
 description = "Django Function Views"
 authors = ["Roman Roelofsen <romanroe@gmail.com>"]
 license = "MIT"
@@ -12,7 +12,7 @@ include = ["dfv"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-django = "4.2.4"
+django = "^4.0.0"
 django-htmx = "^1.14.0"
 lxml = "^4.9.2"
 wrapt = "^1.15.0"
@@ -110,11 +110,7 @@ show_error_context = true
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = []
-#plugins = ["mypy_django_plugin.main"]
 exclude = [
     "migrations/",
     "docs",
 ]
-
-#[tool.django-stubs]
-#django_settings_module = "project.settings"
