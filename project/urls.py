@@ -6,6 +6,7 @@ urlpatterns = [
     # DFV Demos
     path("elements/", include("main.views.elements")),
     path("form/", include("main.views.form")),
+    path("demos/", include("main.views.demos")),
     # Internal
     path("__adm__/", admin.site.urls),
     path("__debug__/", include("debug_toolbar.urls")),

@@ -2,12 +2,24 @@ import dataclasses
 import functools
 import inspect
 import json
+import typing
 import uuid
 from dataclasses import dataclass
-from types import NoneType
-from typing import Any, Callable, cast, get_args, get_origin, Literal, Optional, TypeVar
+from types import NoneType, UnionType
+from typing import (
+    Any,
+    Callable,
+    cast,
+    get_args,
+    get_origin,
+    Literal,
+    Optional,
+    Type,
+    TypeVar,
+)
 
 from django import forms
+from django.db import models
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 
 from dfv.utils import _get_request_from_args, querydict_key_removed
@@ -247,6 +259,19 @@ def param(default: T = cast(Any, None), consume=True) -> T:
     return cast(T, InjectedParamQuery(default=default, consume=consume))
 
 
+def check_and_return_model_type(target_type: Any) -> Type[models.Model] | None:
+    if get_origin(target_type) is typing.Union or isinstance(target_type, UnionType):
+        # union type
+        for t in get_args(target_type):
+            if issubclass(t, models.Model):
+                return cast(Type[models.Model], t)
+    elif issubclass(target_type, models.Model):
+        # no union type
+        return cast(Type[models.Model], target_type)
+
+    return None
+
+
 def _convert_value_to_type(values: list[Any], target_type: type):
     # List type
     if get_origin(target_type) == list:
@@ -261,6 +286,8 @@ def _convert_value_to_type(values: list[Any], target_type: type):
 
     if value is None:
         pass  # trigger ValueError
+    elif model_type := check_and_return_model_type(target_type):
+        return model_type.objects.get(pk=value)
     elif isinstance(value, target_type):
         return value  # nothing to do
     elif issubclass(str, target_type):

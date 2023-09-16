@@ -8,6 +8,7 @@ from django.test import RequestFactory
 
 from dfv import inject_args, param, param_get, param_post, view
 from dfv.testutils import create_resolved_request
+from main.models import AppUser
 
 
 def test_without_type_annotation(rf: RequestFactory):
@@ -51,11 +52,20 @@ def test_optional(rf: RequestFactory):
     @view()
     def viewfn(
         _request,
-        p1: str | None = param_get(),
-        p2: Optional[str] = param_get(),
+        p1: Optional[str] = param_get(),
     ):
         assert p1 is None
-        assert p2 is None
+
+    viewfn(rf.get("/"))
+
+
+def test_optional_as_union(rf: RequestFactory):
+    @view()
+    def viewfn(
+        _request,
+        p1: str | None = param_get(),
+    ):
+        assert p1 is None
 
     viewfn(rf.get("/"))
 
@@ -122,6 +132,54 @@ def test_type_conversion_list_annotated(rf: RequestFactory):
         assert 2 in p1
 
     viewfn(rf.get("/?p1=1&p1=2"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: AppUser = param()):
+        assert user is not None
+
+    app_user = AppUser.objects.create(username="testuser")
+    viewfn(rf.get(f"/?user={app_user.id}"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_with_optional(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: Optional[AppUser] = param()):
+        assert user is not None
+
+    app_user = AppUser.objects.create(username="testuser")
+    viewfn(rf.get(f"/?user={app_user.id}"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_with_optional_value_is_none(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: Optional[AppUser] = param()):
+        assert user is None
+
+    viewfn(rf.get("/"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_with_union_none(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: AppUser | None = param()):
+        assert user is not None
+
+    app_user = AppUser.objects.create(username="testuser")
+    viewfn(rf.get(f"/?user={app_user.id}"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_with_union_none_value_is_none(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: AppUser | None = param()):
+        assert user is None
+
+    viewfn(rf.get("/"))
 
 
 def test_post(rf: RequestFactory):
