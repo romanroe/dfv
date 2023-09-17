@@ -1,12 +1,15 @@
 import typing
 from typing import Any, Optional
+from uuid import uuid4
 
 import pytest
 from django import forms
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.test import RequestFactory
 
 from dfv import inject_args, param, param_get, param_post, view
+from dfv.inject_args import ObjectDoesNotExistWithPk
 from dfv.testutils import create_resolved_request
 from main.models import AppUser
 
@@ -89,6 +92,14 @@ def test_type_conversion_int(rf: RequestFactory):
     viewfn(rf.get("/?p1=1"))
 
 
+def test_type_conversion_with_exception(rf: RequestFactory):
+    @view()
+    def viewfn(_request, p1: int | ValueError = param_get()):
+        assert isinstance(p1, ValueError)
+
+    viewfn(rf.get("/?p1=a"))
+
+
 def test_type_conversion_float(rf: RequestFactory):
     @view()
     def viewfn(_request, p1: float = param_get()):
@@ -142,6 +153,38 @@ def test_type_conversion_model(rf: RequestFactory):
 
     app_user = AppUser.objects.create(username="testuser")
     viewfn(rf.get(f"/?user={app_user.id}"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_wrong_id_object_does_not_exist_type(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: AppUser | ObjectDoesNotExist = param()):
+        assert isinstance(user, ObjectDoesNotExist)
+
+    viewfn(rf.get(f"/?user={uuid4()}"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_wrong_id_object_does_not_exist__with_pktype(
+    rf: RequestFactory,
+):
+    wrong_id = uuid4()
+
+    @view()
+    def viewfn(_request, user: AppUser | ObjectDoesNotExistWithPk = param()):
+        assert isinstance(user, ObjectDoesNotExistWithPk)
+        assert user.pk == str(wrong_id)
+
+    viewfn(rf.get(f"/?user={wrong_id}"))
+
+
+@pytest.mark.django_db
+def test_type_conversion_model_wrong_id_model_does_not_exist_type(rf: RequestFactory):
+    @view()
+    def viewfn(_request, user: AppUser | AppUser.DoesNotExist = param()):  # type: ignore
+        assert isinstance(user, AppUser.DoesNotExist)
+
+    viewfn(rf.get(f"/?user={uuid4()}"))
 
 
 @pytest.mark.django_db

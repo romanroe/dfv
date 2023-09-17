@@ -19,6 +19,7 @@ from typing import (
 )
 
 from django import forms
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 
@@ -272,6 +273,14 @@ def check_and_return_model_type(target_type: Any) -> Type[models.Model] | None:
     return None
 
 
+class ObjectDoesNotExistWithPk(ObjectDoesNotExist):
+    pk: Any
+
+    def __init__(self, pk: Any):
+        super().__init__(f"Object with pk {pk} does not exist")
+        self.pk = pk
+
+
 def _convert_value_to_type(values: list[Any], target_type: type):
     # List type
     if get_origin(target_type) == list:
@@ -284,22 +293,32 @@ def _convert_value_to_type(values: list[Any], target_type: type):
     # Scalar types
     value = values[0]
 
-    if value is None:
-        pass  # trigger ValueError
-    elif model_type := check_and_return_model_type(target_type):
-        return model_type.objects.get(pk=value)
-    elif isinstance(value, target_type):
-        return value  # nothing to do
-    elif issubclass(str, target_type):
-        return str(value)
-    elif issubclass(int, target_type):
-        return int(value)
-    elif issubclass(float, target_type):
-        return float(value)
-    elif issubclass(bool, target_type):
-        return False if value in (False, "", "false", "False") else True
-    elif issubclass(uuid.UUID, target_type):
-        return uuid.UUID(value)
+    try:
+        if value is None:
+            pass  # trigger ValueError
+        elif model_type := check_and_return_model_type(target_type):
+            try:
+                return model_type.objects.get(pk=value)
+            except model_type.DoesNotExist as e:
+                if issubclass(ObjectDoesNotExistWithPk, target_type):
+                    raise ObjectDoesNotExistWithPk(value)
+                raise e
+        elif isinstance(value, target_type):
+            return value  # nothing to do
+        elif issubclass(str, target_type):
+            return str(value)
+        elif issubclass(int, target_type):
+            return int(value)
+        elif issubclass(float, target_type):
+            return float(value)
+        elif issubclass(bool, target_type):
+            return False if value in (False, "", "false", "False") else True
+        elif issubclass(uuid.UUID, target_type):
+            return uuid.UUID(value)
+    except Exception as error:
+        if isinstance(error, target_type):
+            return error
+        raise error
 
     raise ValueError(f"Unsupported type: {target_type} for value: {value}")
 
