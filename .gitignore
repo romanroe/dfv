@@ -1,6 +1,7 @@
 /.venv
 /data
 /dist
+/docs/build
 
 /.idea/tasks.xml
 /.idea/ruff.xml
