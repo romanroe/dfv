@@ -3,14 +3,14 @@ from typing import Any, Callable, cast
 from django.urls import NoReverseMatch, path, reverse_lazy
 
 
-def get_route_name_for_view_callable(view: Callable) -> str:
+def get_path_name_for_view_callable(view: Callable) -> str:
     namespace: str = cast(Any, view).__module__
     namespace = namespace.replace(".", "-")
     return f"{namespace}-{view.__name__}"
 
 
-def create_route(view: Callable, subpath: str | None = None):
-    name = get_route_name_for_view_callable(view)
+def create_path(view: Callable, subpath: str | None = None):
+    name = get_path_name_for_view_callable(view)
     subpath = subpath if subpath is not None else view.__name__
     return path(subpath, view, name=name)
 
@@ -25,5 +25,5 @@ def resolve_name(name: str, urlconf=None):
 
 
 def resolve_view(view: Callable, urlconf=None):
-    name = get_route_name_for_view_callable(view)
+    name = get_path_name_for_view_callable(view)
     return resolve_name(name, urlconf)

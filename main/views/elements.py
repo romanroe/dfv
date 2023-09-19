@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 from dfv import element, param, view
 from dfv.htmx import swap_oob
-from dfv.route import create_route
+from dfv.route import create_path
 
 
 @view()
@@ -72,6 +72,6 @@ def level3b_element(request: HttpRequest, source=""):
 
 
 urlpatterns = [
-    create_route(level1_page, ""),
-    create_route(level3a_element),
+    create_path(level1_page, ""),
+    create_path(level3a_element),
 ]
