@@ -2,12 +2,13 @@ from datetime import datetime
 
 from django.http import HttpRequest
 from django.shortcuts import render
-from django.urls import path
 
-from dfv import element, param
+from dfv import element, param, view
 from dfv.htmx import swap_oob
+from dfv.route import create_route
 
 
+@view()
 def level1_page(request: HttpRequest):
     return render(
         request,
@@ -71,6 +72,6 @@ def level3b_element(request: HttpRequest, source=""):
 
 
 urlpatterns = [
-    path("", level1_page, name="level1_page"),
-    path("level3a_element", level3a_element, name="dfv_demos_level3a"),
+    create_route(level1_page, ""),
+    create_route(level3a_element),
 ]

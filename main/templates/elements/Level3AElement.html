@@ -1,9 +1,11 @@
+{% load dfv %}
+
 <h3>Level 3 A</h3>
 {{ timestamp }}
 <br>
 {{ source }}
 
-<form hx-post="{% url "dfv_demos_level3a" %}">
+<form hx-post="{% view_url %}">
     <div>
         <button name="action" value="2">Refresh 2</button>
     </div>
