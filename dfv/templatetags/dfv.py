@@ -3,7 +3,7 @@ from django.template import RequestContext
 from django.templatetags.static import static
 from django.utils.html import format_html
 
-from dfv.route import resolve_view
+from dfv.route import reverse_view
 from dfv.view_stack import get_view_fn_call_stack_from_request_or_raise
 
 register = template.Library()
@@ -22,4 +22,4 @@ def dfv():
 def view_url(context: RequestContext):
     stack = get_view_fn_call_stack_from_request_or_raise(context.request)
     view = stack[-1]
-    return resolve_view(view)
+    return reverse_view(view)
