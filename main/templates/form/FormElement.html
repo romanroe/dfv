@@ -3,45 +3,47 @@
 <div>{{ url }}</div>
 
 <form hx-post="{{ url }}" novalidate>
+    <div hx-patch="{{ url }}" hx-trigger="input">
+        {% with form.f1 as field %}
+            <div class="row">
+                <div class="col">
+                    {{ field.label }}
+                </div>
 
-    {% with form.f1 as field %}
-        <div class="row">
-            <div class="col">
-                {{ field.label }}
+                <div class="col"
+
+                     id="field_f1"
+{#                     hx-target="#field_f1"#}
+{#                     hx-select="#field_f1"#}
+{#                     hx-patch="{{ url }}"#}
+{#                     hx-trigger="input"#}
+{#                     hx-swap="merge"#}
+{#                     hx-include="form"#}
+                >
+
+                    {{ field|add_class:"form-control" }}
+                    <div>
+                        {{ field.errors }}
+                    </div>
+                </div>
+
             </div>
+        {% endwith %}
 
-            <div class="col"
-
-                 id="field_f1"
-                 hx-target="#field_f1"
-                 hx-select="#field_f1"
-                 hx-patch="{{ url }}"
-                 hx-trigger="input"
-                 hx-swap="merge"
-                 hx-include="form">
-
-                {{ field|add_class:"form-control" }}
-                <div>
-                    {{ field.errors }}
+        {% with form.f2 as field %}
+            <div class="row">
+                <div class="col">
+                    {{ field.label }}
+                </div>
+                <div class="col">
+                    {{ field|add_class:"form-control" }}
+                    <div>
+                        {{ field.errors }}
+                    </div>
                 </div>
             </div>
+        {% endwith %}
 
-        </div>
-    {% endwith %}
-
-    {% with form.f2 as field %}
-        <div class="row">
-            <div class="col">
-                {{ field.label }}
-            </div>
-            <div class="col">
-                {{ field|add_class:"form-control" }}
-                <div>
-                    {{ field.errors }}
-                </div>
-            </div>
-        </div>
-    {% endwith %}
-
-    <button>Submit</button>
+        <button>Submit</button>
+    </div>
 </form>

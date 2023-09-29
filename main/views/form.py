@@ -34,6 +34,7 @@ def form_page(request):
 @element()
 def form_element(request: HttpRequest):
     form = create_form(request, FormPageForm)
+
     if is_valid_submit(request, form):
         print("form.cleaned_data", form.cleaned_data)
 

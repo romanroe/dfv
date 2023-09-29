@@ -1,7 +1,6 @@
 import dataclasses
 import functools
 import inspect
-import json
 import typing
 import uuid
 from dataclasses import dataclass
@@ -18,13 +17,11 @@ from typing import (
     TypeVar,
 )
 
-from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
+from django.http import HttpRequest, HttpResponse, QueryDict
 
 from dfv.utils import _get_request_from_args, querydict_key_removed
-from dfv.view_stack import is_patch, is_post
 
 VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 
@@ -32,14 +29,14 @@ VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 def inject_args(
     *,
     auto_param: bool | Literal["get", "post"] = False,
-    auto_form: Optional[bool | str] = True,
+    # auto_form: Optional[bool | str] = True,
 ) -> Callable[[VIEW_FN], VIEW_FN]:
     def decorator(fn: VIEW_FN) -> VIEW_FN:
         parameters: list[inspect.Parameter] = list(
             inspect.signature(fn).parameters.values()
         )
         injected_params = _extract_injected_params(
-            fn, parameters, auto_param, auto_form
+            fn, parameters, auto_param  # , auto_form
         )
         arg_names = [p.name for p in parameters]
 
@@ -111,7 +108,7 @@ def _extract_injected_params(
     view_fn: Callable[[Any], Any],
     parameters: list[inspect.Parameter],
     auto_param: bool | Literal["get"] | Literal["post"],
-    auto_form: Optional[bool | str] = True,
+    # auto_form: Optional[bool | str] = True,
 ) -> dict[str, InjectedParam]:
     """
     Extracts all injected parameters from the given list of function arguments.
@@ -121,7 +118,7 @@ def _extract_injected_params(
     # skip first request parameter
     parameters = parameters[1:]
 
-    found_form_arg = False
+    # found_form_arg = False
     for arg in parameters:
         if isinstance(arg.default, InjectedParam):
             ip: InjectedParam = arg.default
@@ -133,21 +130,21 @@ def _extract_injected_params(
                 arg.default if arg.default != inspect.Parameter.empty else None
             )
             # handle form
-            if (
-                auto_form
-                and isinstance(arg.annotation, type)
-                and issubclass(arg.annotation, forms.BaseForm)
-            ):
-                if found_form_arg:
-                    raise Exception(
-                        "You can only have one Form argument in a view function."
-                    )
-                found_form_arg = True
-                result[arg.name] = _setup_injected_param(
-                    view_fn, handle_form(), arg.name, arg
-                )
+            # if (
+            #     auto_form
+            #     and isinstance(arg.annotation, type)
+            #     and issubclass(arg.annotation, forms.BaseForm)
+            # ):
+            #     if found_form_arg:
+            #         raise Exception(
+            #             "You can only have one Form argument in a view function."
+            #         )
+            #     found_form_arg = True
+            #     result[arg.name] = _setup_injected_param(
+            #         view_fn, handle_form(), arg.name, arg
+            #     )
             # from here, handle get and post params
-            elif auto_param is True:
+            if auto_param is True:
                 result[arg.name] = _setup_injected_param(
                     view_fn, InjectedParamQuery(default=default_value), arg.name, arg
                 )
@@ -323,64 +320,64 @@ def _convert_value_to_type(values: list[Any], target_type: type):
     raise ValueError(f"Unsupported type: {target_type} for value: {value}")
 
 
-@dataclasses.dataclass
-class InjectedParamForm(InjectedParam):
-    kwargs_factory: Optional[Callable[..., dict[str, Any]]] = dataclasses.field(
-        default=None
-    )
+# @dataclasses.dataclass
+# class InjectedParamForm(InjectedParam):
+#     kwargs_factory: Optional[Callable[..., dict[str, Any]]] = dataclasses.field(
+#         default=None
+#     )
+#
+#     def check(self):
+#         if not issubclass(self.target_type, forms.BaseForm):
+#             raise Exception(
+#                 f"argument type for handle_form() must be a subclass of django.forms.BaseForm, got {self.target_type}"
+#             )
+#
+#     def get_value(self, args: Any, kwargs: dict[str, Any]):
+#         request = _get_request_from_args(args)
+#         form_kwargs = (
+#             self.kwargs_factory(request) if self.kwargs_factory is not None else {}
+#         )
+#
+#         if is_post(request):
+#             form = self.target_type(
+#                 data=request.POST, files=request.FILES, **form_kwargs
+#             )
+#         elif request.content_type == "application/json":
+#             new_post_dict = cast(QueryDict, request.POST).copy()
+#             new_post_dict.update(json.loads(request.body))
+#             form = self.target_type(data=new_post_dict, **form_kwargs)
+#         else:
+#             form = self.target_type(**form_kwargs)
+#         return form
+#
+#     def replace_response(
+#         self, request: HttpRequest, value: forms.Form
+#     ) -> Optional[HttpResponse]:
+#         if is_patch(request) and request.content_type == "application/json":
+#             validate_field = request.headers.get("X-DFV-Validate-Field")
+#             value.is_valid()
+#             fields = {}
+#             for bound_field in value:
+#                 widget = bound_field.field.widget
+#                 fields[bound_field.name] = {
+#                     "valid": len(bound_field.errors) == 0,
+#                     "errors": str(value[bound_field.name].errors),
+#                     "attrs": widget.attrs,
+#                 }
+#
+#             return JsonResponse(
+#                 {
+#                     "name": validate_field,
+#                     "fields": fields,
+#                     "non_field_errors": str(value.non_field_errors()),
+#                     "form_valid": value.is_valid(),
+#                 }
+#             )
+#
+#         return None
 
-    def check(self):
-        if not issubclass(self.target_type, forms.BaseForm):
-            raise Exception(
-                f"argument type for handle_form() must be a subclass of django.forms.BaseForm, got {self.target_type}"
-            )
 
-    def get_value(self, args: Any, kwargs: dict[str, Any]):
-        request = _get_request_from_args(args)
-        form_kwargs = (
-            self.kwargs_factory(request) if self.kwargs_factory is not None else {}
-        )
-
-        if is_post(request):
-            form = self.target_type(
-                data=request.POST, files=request.FILES, **form_kwargs
-            )
-        elif request.content_type == "application/json":
-            new_post_dict = cast(QueryDict, request.POST).copy()
-            new_post_dict.update(json.loads(request.body))
-            form = self.target_type(data=new_post_dict, **form_kwargs)
-        else:
-            form = self.target_type(**form_kwargs)
-        return form
-
-    def replace_response(
-        self, request: HttpRequest, value: forms.Form
-    ) -> Optional[HttpResponse]:
-        if is_patch(request) and request.content_type == "application/json":
-            validate_field = request.headers.get("X-DFV-Validate-Field")
-            value.is_valid()
-            fields = {}
-            for bound_field in value:
-                widget = bound_field.field.widget
-                fields[bound_field.name] = {
-                    "valid": len(bound_field.errors) == 0,
-                    "errors": str(value[bound_field.name].errors),
-                    "attrs": widget.attrs,
-                }
-
-            return JsonResponse(
-                {
-                    "name": validate_field,
-                    "fields": fields,
-                    "non_field_errors": str(value.non_field_errors()),
-                    "form_valid": value.is_valid(),
-                }
-            )
-
-        return None
-
-
-def handle_form(
-    *, kwargs_factory: Optional[Callable[..., dict[str, Any]]] = None
-) -> Any:
-    return InjectedParamForm(kwargs_factory=kwargs_factory)
+# def handle_form(
+#     *, kwargs_factory: Optional[Callable[..., dict[str, Any]]] = None
+# ) -> Any:
+#     return InjectedParamForm(kwargs_factory=kwargs_factory)

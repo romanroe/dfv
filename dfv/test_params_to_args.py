@@ -3,14 +3,12 @@ from typing import Any, Optional
 from uuid import uuid4
 
 import pytest
-from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.test import RequestFactory
 
 from dfv import inject_args, param, param_get, param_post, view
 from dfv.inject_args import ObjectDoesNotExistWithPk
-from dfv.testutils import create_resolved_request
 from main.models import AppUser
 
 
@@ -368,42 +366,42 @@ def test_auto_param_post_does_not_receive_get_params(rf: RequestFactory):
     untyped_viewfn(rf.post("/p2=x", {"p1": "a"}))
 
 
-def test_auto_param_form():
-    class TestForm(forms.Form):
-        p1 = forms.TextInput()
-        p2 = forms.TextInput()
-
-    @view()
-    def viewfn(_request, form: TestForm):
-        assert type(form) == TestForm
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-    untyped_viewfn(create_resolved_request(viewfn, "POST", {"p1": "a", "p2": "b"}))
-
-
-def test_multiple_form_params_raises_exception():
-    class TestForm(forms.Form):
-        p1 = forms.TextInput()
-        p2 = forms.TextInput()
-
-    def test():
-        @view()
-        def viewfn(_request, _form1: TestForm, _form2: TestForm):
-            pass
-
-    with pytest.raises(
-        Exception, match="You can only have one Form argument in a view function"
-    ):
-        test()
+# def test_auto_param_form():
+#     class TestForm(forms.Form):
+#         p1 = forms.TextInput()
+#         p2 = forms.TextInput()
+#
+#     @view()
+#     def viewfn(_request, form: TestForm):
+#         assert type(form) == TestForm
+#
+#     untyped_viewfn = typing.cast(Any, viewfn)
+#     untyped_viewfn(create_resolved_request(viewfn, "POST", {"p1": "a", "p2": "b"}))
 
 
-def test_auto_param_form_is_false(rf: RequestFactory):
-    class TestForm(forms.Form):
-        p1 = forms.TextInput()
-        p2 = forms.TextInput()
+# def test_multiple_form_params_raises_exception():
+#     class TestForm(forms.Form):
+#         p1 = forms.TextInput()
+#         p2 = forms.TextInput()
+#
+#     def test():
+#         @view()
+#         def viewfn(_request, _form1: TestForm, _form2: TestForm):
+#             pass
+#
+#     with pytest.raises(
+#         Exception, match="You can only have one Form argument in a view function"
+#     ):
+#         test()
 
-    @inject_args(auto_form=False)
-    def viewfn(_request, form: Optional[TestForm] = None):
-        assert form is None
 
-    viewfn(rf.post("/", {"p1": "a", "p2": "b"}))
+# def test_auto_param_form_is_false(rf: RequestFactory):
+#     class TestForm(forms.Form):
+#         p1 = forms.TextInput()
+#         p2 = forms.TextInput()
+#
+#     @inject_args(auto_form=False)
+#     def viewfn(_request, form: Optional[TestForm] = None):
+#         assert form is None
+#
+#     viewfn(rf.post("/", {"p1": "a", "p2": "b"}))
