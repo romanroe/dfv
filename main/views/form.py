@@ -8,8 +8,9 @@ from dfv.form import create_form, is_valid_submit
 
 
 class FormPageForm(forms.Form):
-    f1 = forms.CharField()
-    f2 = forms.CharField()
+    f1 = forms.CharField(min_length=3)
+    f2 = forms.CharField(min_length=3)
+    names = forms.ChoiceField(choices=[("a", "A"), ("b", "B")], required=False)
 
     def is_valid(self):
         valid = super().is_valid()

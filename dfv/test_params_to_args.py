@@ -1,5 +1,6 @@
 import typing
 from typing import Any, Optional
+from urllib.parse import urlencode
 from uuid import uuid4
 
 import pytest
@@ -234,6 +235,21 @@ def test_post(rf: RequestFactory):
         assert p2 == "b"
 
     viewfn(rf.post("/", {"p1": "a", "p2": "b"}))
+
+
+def test_patch(rf: RequestFactory):
+    @view()
+    def viewfn(_request, p1: str = param(), p2: str = param()):
+        assert p1 == "a"
+        assert p2 == "b"
+
+    viewfn(
+        rf.patch(
+            "/",
+            urlencode({"p1": "a", "p2": "b"}),
+            content_type="application/x-www-form-urlencoded",
+        )
+    )
 
 
 def test_get_and_post_order(rf: RequestFactory):

@@ -11,11 +11,18 @@ register = template.Library()
 
 @register.simple_tag
 def dfv():
-    js = format_html(
+    return format_html(
         '<script type="text/javascript" defer src="{}"></script>',
         static("../static/dfv.js"),
     )
-    return js
+
+
+@register.simple_tag
+def dfv_script_swap_merge():
+    return format_html(
+        '<script type="text/javascript" defer src="{}"></script>',
+        static("../static/dfv_swap_merge.js"),
+    )
 
 
 @register.simple_tag(takes_context=True)

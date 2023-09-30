@@ -34,7 +34,7 @@ def test_form_patch(rf: RequestFactory):
     def viewfn(request):
         fi = create_form(request, TwoFieldForm)
         form_ref.append(fi)
-        return HttpResponse(form_ref)
+        return HttpResponse()
 
     req = rf.patch(
         "/view",
@@ -45,12 +45,27 @@ def test_form_patch(rf: RequestFactory):
     form = form_ref[0]
     assert form is not None
     assert form.initial["p1"] == "a"
-    # print(form)
 
-    # assert res.content == (
-    #     b"""<input type="text" name="p1" required id="id_p1" value="a">"""
-    #     b"""<input type="text" name="p2" required id="id_p2">"""
-    # )
+
+def test_form_patch_initial(rf: RequestFactory):
+    form_ref = []
+
+    @view()
+    def viewfn(request):
+        fi = create_form(request, TwoFieldForm, initial={"p2": "b"})
+        form_ref.append(fi)
+        return HttpResponse()
+
+    req = rf.patch(
+        "/view",
+        urlencode({"p1": "a"}),
+        content_type="application/x-www-form-urlencoded",
+    )
+    viewfn(req)
+    form = form_ref[0]
+    assert form is not None
+    assert form.initial["p1"] == "a"
+    assert form.initial["p2"] == "b"
 
 
 def test_form_post(rf: RequestFactory):

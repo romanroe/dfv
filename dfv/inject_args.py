@@ -183,7 +183,13 @@ class InjectedParamQuery(InjectedParam):
         getd = {name: getqd.getlist(name) for name in getqd}
         postqd = cast(QueryDict, request.POST)
         postd = {name: postqd.getlist(name) for name in postqd}
-        return postd | getd
+
+        formqd = QueryDict(mutable=True)
+        if request.content_type == "application/x-www-form-urlencoded":
+            formqd.update(
+                QueryDict(request.body, mutable=True, encoding=request.encoding)
+            )
+        return postd | getd | formqd
 
     def _consume_param(self, request: HttpRequest):
         if self.query_param_name in request.GET:
