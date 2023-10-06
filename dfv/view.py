@@ -14,6 +14,17 @@ VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 
 
 class ViewResponse(wrapt.ObjectProxy):
+    def __init__(self, response: HttpResponse | None):
+        if response is not None:
+            content = response_to_str(response)
+            bcontent = bytes(content, "UTF-8")
+            dfv_swap_oob = getattr(response, "_dfv_swap_oob", [])
+            for oob in dfv_swap_oob:
+                bcontent += oob
+            response.content = bcontent
+
+        super().__init__(response)
+
     def __str__(self):
         return response_to_str(self)
 
@@ -46,6 +57,8 @@ def view(
             try:
                 stack.append(fn)
                 result = fn(*args, **kwargs)
+                # if not isinstance(result, HttpResponse):
+                #     raise Exception("view function must return an HttpResponse")
                 return (
                     ViewResponse(result)
                     if not isinstance(result, ViewResponse)

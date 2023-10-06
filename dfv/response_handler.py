@@ -38,5 +38,5 @@ def hook_swap_oob(
     request: HttpRequest,
     additional: HttpResponse | list[HttpResponse],
     hx_swap_oob_method="outerHTML",
-):
+) -> None:
     add_response_handler(request, lambda r: swap_oob(r, additional, hx_swap_oob_method))

@@ -1,11 +1,30 @@
 import functools
-from typing import Any, Callable, cast, Optional
+import lxml.html
+
+from typing import Any, Callable, cast, Optional, Tuple
 
 from django.http import HttpResponse
 from django_htmx.http import reswap, retarget
 
 from dfv.utils import response_to_str
 from dfv.view import view, VIEW_FN, ViewResponse
+
+
+def split_content_and_swap_oob(content: str) -> Tuple[str, str]:
+    if "hx-swap-oob" not in content.lower():
+        return content, ""
+
+    parsed: lxml.html.HtmlElement = lxml.html.fromstring(content)
+    main = ""
+    swaps = ""
+    for el in parsed:
+        el_str = str(lxml.html.tostring(el))
+        if "hx-swap-oob" not in el.attrib:
+            main += el_str
+        else:
+            swaps += el_str
+
+    return main, swaps
 
 
 class ElementResponse(ViewResponse):
@@ -23,22 +42,22 @@ class ElementResponse(ViewResponse):
         classes: Optional[str] = None,
         no_element_wrap=False,
     ):
-        if not no_element_wrap:
-            attr_id = f"id='{element_id}'" if element_id is not None else ""
-            attr_hx_target = f"hx-target='{hx_target}'" if hx_target else ""
-            attr_hx_swap = f"hx-swap='{hx_swap}'" if hx_swap else ""
-            attr_classes = f"class='{classes}'" if classes else ""
-            new_content = (
-                f"""<{tag} {attr_id} {attr_hx_target} {attr_hx_swap} {attr_classes}>"""
-                f"""{response_to_str(response)}"""
-                f"""</{tag}>"""
-            )
-            response.content = bytes(new_content, "UTF-8")
+        if no_element_wrap:
+            return
 
+        attr_id = f"id='{element_id}'" if element_id is not None else ""
+        attr_hx_target = f"hx-target='{hx_target}'" if hx_target else ""
+        attr_hx_swap = f"hx-swap='{hx_swap}'" if hx_swap else ""
+        attr_classes = f"class='{classes}'" if classes else ""
+        content = response_to_str(response)
+        wrapped = (
+            f"""<{tag} {attr_id} {attr_hx_target} {attr_hx_swap} {attr_classes}>"""
+            f"""{content}"""
+            f"""</{tag}>"""
+        )
+
+        response.content = bytes(wrapped, "UTF-8")
         super().__init__(response)
-
-    def __str__(self):
-        return response_to_str(self)
 
 
 def body_response(response: HttpResponse, hx_swap="outerHTML") -> HttpResponse:
@@ -47,7 +66,6 @@ def body_response(response: HttpResponse, hx_swap="outerHTML") -> HttpResponse:
     return ElementResponse(response, None, no_element_wrap=True)
 
 
-# noinspection PyShadowingNames
 def element(
     element_id: Optional[str] = None,
     *,

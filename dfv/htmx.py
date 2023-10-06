@@ -22,5 +22,10 @@ def swap_oob(
             )
 
         parsed.attrib["hx-swap-oob"] = f"{hx_swap_oob_method}:#{id}"
-        response.content += lxml.html.tostring(parsed)
+        # response.content += lxml.html.tostring(parsed)
+        oob_wrapped = lxml.html.tostring(parsed)
+
+        dfv_swap_oob = getattr(response, "_dfv_swap_oob", [])
+        setattr(response, "_dfv_swap_oob", dfv_swap_oob + [oob_wrapped])
+
     return response
