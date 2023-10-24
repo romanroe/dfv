@@ -23,6 +23,10 @@ document.body.addEventListener('htmx:configRequest', addCsrfTokenHeader);
 
 document.body.addEventListener("fetch:beforeRequest", addCsrfTokenHeader);
 
+window.parse_element = function (elementId) {
+    return JSON.parse(document.getElementById(elementId).textContent)
+}
+
 /**
  * @param {HTMLElement} el
  */
