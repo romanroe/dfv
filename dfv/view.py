@@ -53,12 +53,12 @@ def view(
         def inner(*args, **kwargs) -> HttpResponse:
             view_request: HttpRequest = args[0]
             stack = get_view_fn_call_stack_from_request(view_request)
-            result: HttpResponse | None = None
             try:
                 stack.append(fn)
                 result = fn(*args, **kwargs)
-                # if not isinstance(result, HttpResponse):
-                #     raise Exception("view function must return an HttpResponse")
+                if result is not None and len(stack) == 1:
+                    result = process_response(view_request, result)
+
                 return (
                     ViewResponse(result)
                     if not isinstance(result, ViewResponse)
@@ -66,8 +66,6 @@ def view(
                 )
             finally:
                 stack.pop()
-                if result is not None and len(stack) == 0:
-                    process_response(view_request, result)
 
         return cast(VIEW_FN, inner)
 

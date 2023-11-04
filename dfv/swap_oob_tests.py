@@ -7,7 +7,7 @@ from dfv import element
 from dfv.htmx import swap_oob
 from dfv.response_handler import hook_swap_oob
 from dfv.utils import response_to_str
-from dfv.view import ViewResponse
+from dfv.view import view, ViewResponse
 
 
 def test_append_swap_oob():
@@ -70,3 +70,20 @@ def test_append_swap_oob_child_element_return_parent_element(rf: RequestFactory)
     assert parsed[0].attrib["id"] == "child"
     assert parsed[1].attrib["id"] == "parent"
     assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#parent"
+
+
+def test_hook_swap_oob_with_action_view_function(rf: RequestFactory):
+    @element()
+    def el(_request):
+        return HttpResponse("parent")
+
+    @view()
+    def action(request):
+        hook_swap_oob(request, el(request))
+        return HttpResponse("<dummy></dummy>")
+
+    response = action(rf.get("/"))
+    parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
+    assert parsed[0].tag == "dummy"
+    assert parsed[1].attrib["id"] == "el"
+    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#el"
