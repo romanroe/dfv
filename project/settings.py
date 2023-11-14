@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "dfv",
     "main",
+    "demo_address_book",
 ]
 
 AUTH_USER_MODEL = "main.AppUser"
@@ -83,7 +84,6 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
-            "string_if_invalid": "[!!! UNKNOWN `%s` !!!]",
         },
     },
 ]
@@ -110,23 +110,7 @@ if "test" in sys.argv:
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {
-            "min_length": 4,
-        },
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
-]
+AUTH_PASSWORD_VALIDATORS: list = []
 
 # Django allauth
 # https://django-allauth.readthedocs.io/en/latest/configuration.html

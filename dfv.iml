@@ -35,6 +35,7 @@
       <list>
         <option value="$MODULE_DIR$/dfv/templates" />
         <option value="$MODULE_DIR$/main/templates" />
+        <option value="$MODULE_DIR$/demo_address_book/templates" />
       </list>
     </option>
   </component>
