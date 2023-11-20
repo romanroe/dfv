@@ -55,7 +55,7 @@ def view(
             stack = get_view_fn_call_stack_from_request(view_request)
             try:
                 stack.append(fn)
-                result = fn(*args, **kwargs)
+                result = fn(view_request, *args[1:], **kwargs)
                 if result is not None and len(stack) == 1:
                     result = process_response(view_request, result)
 

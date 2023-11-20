@@ -1,36 +1,48 @@
-<div hx-include="input">
+{% load dfv %}
+
+<div>
 
     <div class="m-2">
         <input class="form-control"
                placeholder="Filter..."
                name="filter_text"
                value="{{ filter_text }}"
-               hx-get="{{ url }}"
+               hx-get="{{ request.path }}"
                hx-trigger="keyup changed delay:500ms"
-               hx-target="#person-list"
                hx-select="#person-list"
+               hx-target="#person-list"
         />
     </div>
 
-    <div id="person-list" class="list-group list-group-flush">
+    <div id="person-list"
+         class="list-group list-group-flush"
+         hx-boost="true"
+         hx-target="#body"
+         hx-select="#body"
+         hx-include="previous input"
+    >
 
         {% for person in persons %}
-            <a href="#"
-               class="list-group-item list-group-item-action {% if person.id == person_id %}active{% endif %}"
-               hx-get="{% url "address-book-page-action-open-person" person.id %}"
-               hx-include="input"
-            >
-                {{ person.first_name }} {{ person.last_name }}
-            </a>
+            <div>
+
+                <a href="{{ request.path }}"
+                    {% hx_vals person_id=person.id|asstr %}
+                   class="list-group-item list-group-item-action {% if person.id == person_id %}active{% endif %}"
+                    {#               hx-get="{% url "address-book-page-action-open-person" person.id %}"#}
+                    {#               hx-include="input"#}
+                >
+                    {{ person.first_name }} {{ person.last_name }}
+                </a>
+            </div>
         {% endfor %}
 
         {% if has_more_pages %}
-            <div hx-get="{{ url }}?page={{ page|add:1 }}"
-                 hx-trigger="intersect once"
-                 hx-select="#person-list>*"
-                 hx-target="this"
-                 hx-swap="outerHTML"
-            ></div>
+            {#            <div hx-get="{{ url }}?page={{ page|add:1 }}"#}
+            {#                 hx-trigger="intersect once"#}
+            {#                 hx-select="#person-list>*"#}
+            {#                 hx-target="this"#}
+            {#                 hx-swap="outerHTML"#}
+            {#            ></div>#}
         {% endif %}
 
     </div>

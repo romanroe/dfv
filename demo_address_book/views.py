@@ -1,17 +1,12 @@
 from uuid import UUID
 
-from django import forms
 from django.db.models import Q
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest
 from django.shortcuts import render
-from django.urls import path, reverse
-from django_htmx.http import push_url, reswap
-from icecream import ic
+from django.urls import path
 
 from demo_address_book.models import Person
 from dfv import element, param, view
-from dfv.form import create_form, is_valid_submit
-from dfv.response_handler import hook_swap_oob
 
 
 @view()
@@ -24,7 +19,7 @@ def address_book_page(
         "demo_address_book/address_book_page.html",
         {
             "list_element": list_element(request, person_id=person_id),
-            "detail_element": detail_element(request, person_id),
+            "detail_element": detail_element(request, person_id=person_id),
         },
     )
 
@@ -44,14 +39,14 @@ def list_element(
         )
     persons = persons.order_by("first_name", "last_name")
 
-    page_size = 20
+    page_size = 30
     persons = persons[page * page_size : ((page + 1) * page_size) + 1]
 
     return render(
         request,
         "demo_address_book/list_element.html",
         {
-            "url": reverse("address-book-page-list"),
+            # "url": reverse("address-book-page-list"),
             "page": page,
             "has_more_pages": len(persons) > page_size,
             "filter_text": filter_text,
@@ -61,25 +56,25 @@ def list_element(
     )
 
 
-@view()
-def action_open_person(request: HttpRequest, person_id: UUID):
-    hook_swap_oob(
-        request,
-        [
-            list_element(request, person_id=person_id),
-            detail_element(request, person_id=person_id),
-        ],
-    )
-    return push_url(
-        reswap(HttpResponse(), "none"),
-        f"""{reverse("address-book-page")}?person_id={person_id}""",
-    )
+# @view()
+# def action_open_person(request: HttpRequest, person_id: UUID):
+#     hook_swap_oob(
+#         request,
+#         [
+#             list_element(request, person_id=person_id),
+#             detail_element(request, person_id=person_id),
+#         ],
+#     )
+#     return push_url(
+#         reswap(HttpResponse(), "none"),
+#         f"""{reverse("address-book-page")}?person_id={person_id}""",
+#     )
 
 
-class PersonForm(forms.ModelForm):
-    class Meta:
-        model = Person
-        fields = ["first_name", "last_name"]
+# class PersonForm(forms.ModelForm):
+#     class Meta:
+#         model = Person
+#         fields = ["first_name", "last_name"]
 
 
 @element()
@@ -88,34 +83,35 @@ def detail_element(
     person_id: UUID | None = None,
 ):
     person = Person.objects.get(id=person_id) if person_id is not None else None
-    form = create_form(request, PersonForm, instance=person)
 
-    if is_valid_submit(request, form):
-        form.save()
-        return action_open_person(request, person_id=person.id)
+    # form = create_form(request, PersonForm, instance=person)
+    # if is_valid_submit(request, form):
+    #     form.save()
+    #     return action_open_person(request, person_id=person.id)
 
     return render(
         request,
         "demo_address_book/detail_element.html",
         {
-            "url": reverse(
-                "address-book-page-detail",
-                kwargs={"person_id": person_id} if person_id is not None else {},
-            ),
+            # "url": reverse(
+            #     "address-book-page-detail",
+            #     kwargs={"person_id": person_id} if person_id is not None else {},
+            # ),
+            "target": """aaa""",
             "person": person,
-            "form": form,
+            # "form": form,
         },
     )
 
 
 urlpatterns = [
     path("", address_book_page, name="address-book-page"),
-    path("list", list_element, name="address-book-page-list"),
-    path(
-        "action_open_person/<uuid:person_id>",
-        action_open_person,
-        name="address-book-page-action-open-person",
-    ),
-    path("detail/", detail_element, name="address-book-page-detail"),
-    path("detail/<uuid:person_id>", detail_element, name="address-book-page-detail"),
+    # path("list", list_element, name="address-book-page-list"),
+    # path(
+    #     "action_open_person/<uuid:person_id>",
+    #     action_open_person,
+    #     name="address-book-page-action-open-person",
+    # ),
+    # path("detail/", detail_element, name="address-book-page-detail"),
+    # path("detail/<uuid:person_id>", detail_element, name="address-book-page-detail"),
 ]

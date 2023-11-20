@@ -1,10 +1,58 @@
 {% load widget_tweaks %}
+{% load dfv %}
 
 {% if person %}
 
     <div class="p-3">
 
-        <form hx-post="{{ url }}" novalidate>
+
+        <div class="border rounded p-3">
+            <h5>HyperScript</h5>
+            <div>{{ person.first_name }}</div>
+            <div>{{ person.last_name }}</div>
+
+            <script type="text/hyperscript">
+                behavior FormState
+                    def form_state()
+                        send form_state(state:me as Values)
+                    end
+                    init form_state()
+                    then on input form_state()
+                end
+            </script>
+
+            <form _="install FormState">
+                <input type="text" name="target" value="{{ target }}"/>
+                <input type="text" name="confirm"/>
+                <button _="on form_state(state) from the closest <form/> log state set my.disabled to state.target != state.confirm">
+                    OK
+                </button>
+            </form>
+        </div>
+
+        <script type="text/javascript">
+            function data(query) {
+                console.log(query);
+                //return JSON.parse(document.querySelector(query).textContent);
+                return {
+                    {#first_name: 'John',#}
+                }
+            }
+        </script>
+
+        {{ person|model_to_dict|json_script:"person" }}
+
+        <div class="border rounded p-3"
+             x-data="{first_name: $refs.target.value}">
+            <h5>AlpineJS</h5>
+            <input type="text" x-ref="target" value="foo"/>
+            <div x-text="first_name"></div>
+
+        </div>
+
+
+        <form hx-post="{{ url }}"
+              novalidate>
 
             {% with form.first_name as field %}
                 <div class="row mb-3">
@@ -26,10 +74,14 @@
                 </div>
             {% endwith %}
 
-        <div>
-            <button class="btn btn-primary" type="submit">Save</button>
-            <button class="btn btn-secondary" type="reset">Reset</button>
-        </div>
+            <div>
+                <button class="btn btn-primary"
+                        type="submit">Save
+                </button>
+                <button class="btn btn-secondary"
+                        type="reset">Reset
+                </button>
+            </div>
 
         </form>
 
