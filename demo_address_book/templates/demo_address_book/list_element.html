@@ -1,5 +1,17 @@
 {% load dfv %}
 
+{#<div>{% reverse_view view 1 2 "a b" a=3 b=4 %}</div>#}
+{#<div>{% reverse_view view 1 2 "a b" a=3 b=4 as foo %}</div>#}
+{#<div>{% reverse_view view 1 2 as foo %}</div>#}
+{#<div>{% reverse_view view 1 2 a=3 b="x y" as foo %}</div>#}
+{#<div>{% reverse_view view 1 2 a=3 b=4 as  foo %}</div>#}
+{#<div>{% reverse_view view 1 2 a=3 b=4  as  foo %}</div>#}
+
+{#<div>{% reverse_view view dummy="abc"|upper as foo1 %}</div>#}
+{#<div>{% url 'demo_address_book-views-list_element' dummy="abc"|upper as foo2 %}</div>#}
+{#<div>1: {{ foo1 }}</div>#}
+{#<div>2: {{ foo2 }}</div>#}
+
 <div>
 
     <div class="m-2">
@@ -7,7 +19,7 @@
                placeholder="Filter..."
                name="filter_text"
                value="{{ filter_text }}"
-               hx-get="{{ request.path }}"
+               hx-get="{{ url }}"
                hx-trigger="keyup changed delay:500ms"
                hx-select="#person-list"
                hx-target="#person-list"
@@ -26,10 +38,8 @@
             <div>
 
                 <a href="{{ request.path }}"
-                    {% hx_vals person_id=person.id|asstr %}
+                    {% hx_vals person_id=person.id|to_str %}
                    class="list-group-item list-group-item-action {% if person.id == person_id %}active{% endif %}"
-                    {#               hx-get="{% url "address-book-page-action-open-person" person.id %}"#}
-                    {#               hx-include="input"#}
                 >
                     {{ person.first_name }} {{ person.last_name }}
                 </a>

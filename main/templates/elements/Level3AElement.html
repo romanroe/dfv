@@ -5,7 +5,7 @@
 <br>
 {{ source }}
 
-<form hx-post="{% view_url %}">
+<form hx-post="{% reverse_view self %}">
     <div>
         <button name="action" value="page">Refresh Page</button>
     </div>

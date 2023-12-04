@@ -11,16 +11,17 @@
             <div>{{ person.first_name }}</div>
             <div>{{ person.last_name }}</div>
 
-            <script type="text/hyperscript">
-                behavior FormState
-                    def form_state()
-                        send form_state(state:me as Values)
-                    end
-                    init form_state()
-                    then on input form_state()
-                end
-            </script>
+{#            <script type="text/hyperscript">#}
+{#                behavior FormState#}
+{#                    def form_state()#}
+{#                        send form_state(state:me as Values)#}
+{#                    end#}
+{#                    init form_state()#}
+{#                    then on input form_state()#}
+{#                end#}
+{#            </script>#}
 
+            {% dfv_behavior_form_state %}
             <form _="install FormState">
                 <input type="text" name="target" value="{{ target }}"/>
                 <input type="text" name="confirm"/>
@@ -30,26 +31,17 @@
             </form>
         </div>
 
-        <script type="text/javascript">
-            function data(query) {
-                console.log(query);
-                //return JSON.parse(document.querySelector(query).textContent);
-                return {
-                    {#first_name: 'John',#}
-                }
-            }
-        </script>
 
         {{ person|model_to_dict|json_script:"person" }}
 
         <div class="border rounded p-3"
-             x-data="{first_name: $refs.target.value}">
+             x-data="{aaa: $refs.target.value}">
             <h5>AlpineJS</h5>
-            <input type="text" x-ref="target" value="foo"/>
-            <div x-text="first_name"></div>
+            <input type="text" x-ref="target" value="foo"/> <span x-text="aaa"></span>
+            <input type="text" />
+            <button type="button">click</button>
 
         </div>
-
 
         <form hx-post="{{ url }}"
               novalidate>

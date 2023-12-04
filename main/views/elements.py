@@ -47,6 +47,7 @@ def level3a_element(
         {
             "timestamp": datetime.now().microsecond,
             "source": source,
+            "self": level3a_element,
         },
     )
 
@@ -75,6 +76,6 @@ def level3b_element(request: HttpRequest, source=""):
 
 
 urlpatterns = [
-    create_path(level1_page, ""),
+    create_path(level1_page, url=""),
     create_path(level3a_element),
 ]

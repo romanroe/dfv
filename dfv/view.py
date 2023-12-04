@@ -42,6 +42,8 @@ def view(
         decorators = [auth_decorators.login_required(), *decorators]
 
     def decorator(fn: VIEW_FN) -> VIEW_FN:
+        setattr(fn, "do_not_call_in_templates", True)
+
         if handle_args:
             fn = inject_args()(fn)
 

@@ -3,21 +3,38 @@ import json
 from django import forms, template
 from django.db.models import Model
 from django.template import RequestContext
+from django.template.base import kwarg_re
 from django.templatetags.static import static
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from dfv.route import reverse_view
-from dfv.view_stack import get_view_fn_call_stack_from_request_or_raise
+from dfv.route import reverse_view as reverse_view_fn
 
 register = template.Library()
 
 
 @register.simple_tag
-def dfv():
+def dfv_script():
     return format_html(
         '<script type="text/javascript" defer src="{}"></script>',
         static("../static/dfv.js"),
+    )
+
+
+@register.simple_tag
+def dfv_behavior_form_state():
+    return mark_safe(
+        """
+        <script type="text/hyperscript">
+            behavior FormState
+                def form_state()
+                    send form_state(state:me as Values)
+                end
+                init form_state()
+                then on input form_state()
+            end
+        </script>
+        """,
     )
 
 
@@ -55,12 +72,46 @@ def model_to_dict(model):
 
 
 @register.filter
-def asstr(model):
+def to_str(model):
     return str(model)
 
 
-@register.simple_tag(takes_context=True)
-def view_url(context: RequestContext):
-    stack = get_view_fn_call_stack_from_request_or_raise(context.request)
-    view = stack[-1]
-    return reverse_view(view)
+@register.tag()
+def reverse_view(parser, token):
+    parts = token.split_contents()[1:]
+    if parts[-2] == "as":
+        viewfn, params, var_name = parts[0], parts[1:-2], parts[-1]
+    else:
+        viewfn, params, var_name = parts[0], parts[1:], None
+
+    args = []
+    kwargs = {}
+    for p in params:
+        m = kwarg_re.match(p)
+        name, value = m.groups()
+        value = parser.compile_filter(value)
+        if name:
+            kwargs[name] = value
+        else:
+            args.append(value)
+
+    return ReverseViewNode(viewfn, args, kwargs, var_name)
+
+
+class ReverseViewNode(template.Node):
+    def __init__(self, viewfn, args, kwargs, var_name):
+        self.viewfn = template.Variable(viewfn)
+        self.args = args
+        self.kwargs = kwargs
+        self.var_name = var_name
+
+    def render(self, context):
+        viewfn_var = self.viewfn.resolve(context)
+        args = [arg.resolve(context) for arg in self.args]
+        kwargs = {k: v.resolve(context) for k, v in self.kwargs.items()}
+
+        url = reverse_view_fn(viewfn_var, *args, **kwargs)
+        if self.var_name:
+            context[self.var_name] = url
+            return ""
+        return url

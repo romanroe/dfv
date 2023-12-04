@@ -38,16 +38,3 @@ def test_resolve_view_with_custom_name(rf: RequestFactory):
     request.resolver_match = resolved
     response = viewfn(request)
     assert response.content == b"OK"
-
-
-def test_resolve_view_by_module_and_name(rf: RequestFactory):
-    @view()
-    def viewfn(_request):
-        return HttpResponse("OK")
-
-    urlpatterns = (path("/viewfn/", viewfn, name="viewfn"),)
-    resolved = reverse_view(viewfn, urlconf=urlpatterns)
-    request = rf.get("/")
-    request.resolver_match = resolved
-    response = viewfn(request)
-    assert response.content == b"OK"
