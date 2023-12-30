@@ -4,21 +4,19 @@ from django import forms
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
-from django.urls import path, reverse
-from django_htmx.http import push_url, reswap
+from django.urls import path
 from icecream import ic
 
 from demo_address_book.models import Person
 from dfv import element, param, view
 from dfv.form import create_form, is_valid_submit
-from dfv.response_handler import hook_swap_oob
 from dfv.route import create_path, reverse_view
 
 
 @view()
 def address_book_page(
     request: HttpRequest,
-    person_id: str | None = param(),
+    person_id: UUID | None = param(),
 ):
     return render(
         request,
@@ -26,7 +24,7 @@ def address_book_page(
         {
             "list_element": list_element(request, person_id=person_id),
             "detail_element": detail_element(
-                request, person_id=person_id if person_id is not None else "new"
+                request, person_id=str(person_id) if person_id is not None else "new"
             ),
         },
     )
@@ -35,10 +33,14 @@ def address_book_page(
 @element()
 def list_element(
     request: HttpRequest,
+    action=param("", methods=["POST"]),
     filter_text: str = param(""),
     page: int = param(0),
-    person_id: str | None = None,
+    person_id: UUID | None = param(methods=["POST"]),
 ):
+    # ic(action, person_id)
+    # ic(reverse_view(detail_element, args=["123"]))
+
     persons = Person.objects.all()
     filter_text = filter_text.strip()
     if filter_text:
@@ -61,23 +63,24 @@ def list_element(
             "filter_text": filter_text,
             "persons": persons,
             "person_id": person_id,
+            "detail_element": detail_element,
         },
     )
 
 
-@view()
-def action_open_person(request: HttpRequest, person_id: UUID):
-    hook_swap_oob(
-        request,
-        [
-            list_element(request, person_id=person_id),
-            detail_element(request, person_id=str(person_id)),
-        ],
-    )
-    return push_url(
-        reswap(HttpResponse(), "none"),
-        f"""{reverse("address-book-page")}?person_id={person_id}""",
-    )
+# @view()
+# def action_open_person(request: HttpRequest, person_id: UUID):
+#     hook_swap_oob(
+#         request,
+#         [
+#             list_element(request, person_id=person_id),
+#             detail_element(request, person_id=str(person_id)),
+#         ],
+#     )
+#     return push_url(
+#         reswap(HttpResponse(), "none"),
+#         f"""{reverse("address-book-page")}?person_id={person_id}""",
+#     )
 
 
 class PersonForm(forms.ModelForm):
@@ -97,19 +100,19 @@ def detail_element(
         request, PersonForm, instance=person, initial={"first_name": "aaa"}
     )
 
-    ic(form.data)
-    ic(form["first_name"].value())
-    ic(form.initial)
+    # ic(form.data)
+    # ic(form["first_name"].value())
+    # ic(form.initial)
 
     if is_valid_submit(request, form):
         form.save()
-        return action_open_person(request, person_id=person.id)
+        # return action_open_person(request, person_id=person.id)
 
     return render(
         request,
         "demo_address_book/detail_element.html",
         {
-            "url": reverse_view(detail_element, person_id=person_id),
+            # "url": reverse_view(detail_element, person_id=person_id),
             "target": """aaa""",
             "person": person,
             "form": form,
@@ -117,7 +120,14 @@ def detail_element(
     )
 
 
+@view()
+def foo(request, foo=param(methods=["__all__"])):
+    ic(foo)
+    return HttpResponse("foo")
+
+
 urlpatterns = [
+    path("foo", foo, name="foo"),
     path("", address_book_page, name="address-book-page"),
     create_path(list_element),
     create_path(detail_element)

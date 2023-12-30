@@ -6,31 +6,78 @@ from django.test import RequestFactory
 from dfv import element
 from dfv.htmx import swap_oob
 from dfv.response_handler import hook_swap_oob
+from dfv.testutils import call_with_middleware
 from dfv.utils import response_to_str
-from dfv.view import view, ViewResponse
+from dfv.view import view
 
 
-def test_append_swap_oob():
-    original = HttpResponse("<div id='foo'>foo</foo>")
-    oob = HttpResponse("<span id='oob'>oob</span>")
-    response = ViewResponse(swap_oob(original, oob))
+def _oob1(_request):
+    return HttpResponse("<div id='oob1'>oob1</div>")
+
+
+def _oob2(_request):
+    return HttpResponse("<div id='oob2'>oob2</div>")
+
+
+def test_append_swap_oob(rf: RequestFactory):
+    def view1(request):
+        response = HttpResponse("<div id='foo'>foo</foo>")
+        return swap_oob(response, _oob1(request))
+
+    response = call_with_middleware(rf, view1)
     parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
     assert parsed.attrib["id"] == "foo"
-    assert parsed[0].attrib["id"] == "oob"
-    assert parsed[0].attrib["hx-swap-oob"] == "outerHTML:#oob"
+    assert parsed[0].attrib["id"] == "oob1"
+    assert parsed[0].attrib["hx-swap-oob"] == "outerHTML:#oob1"
 
 
-def test_append_swap_oob_multiple():
-    original = HttpResponse("<div id='foo'>foo</div>")
-    oob1 = HttpResponse("<span id='oob1'>oob1</span>")
-    oob2 = HttpResponse("<span id='oob2'>oob2</span>")
-    response = ViewResponse(swap_oob(original, [oob1, oob2]))
+def test_append_swap_oob_multiple(rf: RequestFactory):
+    def view1(request):
+        response = HttpResponse("<div id='foo'>foo</foo>")
+        return swap_oob(response, [_oob1(request), _oob2(request)])
+
+    response = call_with_middleware(rf, view1)
+
     parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
-    assert parsed[0].attrib["id"] == "foo"
-    assert parsed[1].attrib["id"] == "oob1"
-    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#oob1"
-    assert parsed[2].attrib["id"] == "oob2"
-    assert parsed[2].attrib["hx-swap-oob"] == "outerHTML:#oob2"
+    assert parsed.attrib["id"] == "foo"
+    assert parsed[0].attrib["id"] == "oob1"
+    assert parsed[0].attrib["hx-swap-oob"] == "outerHTML:#oob1"
+    assert parsed[1].attrib["id"] == "oob2"
+    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#oob2"
+
+
+def test_swap_parent_from_element_fn(rf: RequestFactory):
+    @element()
+    def parent(_request):
+        return HttpResponse("parent")
+
+    @element()
+    def child(request):
+        hook_swap_oob(request, parent(request))
+        return HttpResponse("child")
+
+    response = call_with_middleware(rf, child)
+    parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
+    assert parsed[0].attrib["id"] == "child"
+    assert parsed[1].attrib["id"] == "parent"
+    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#parent"
+
+
+def test_swap_parent_from_view_fn(rf: RequestFactory):
+    @element()
+    def parent(_request):
+        return HttpResponse("parent")
+
+    @view()
+    def child(request):
+        hook_swap_oob(request, parent(request))
+        return HttpResponse("<dummy></dummy>")
+
+    response = call_with_middleware(rf, child)
+    parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
+    assert parsed[0].tag == "dummy"
+    assert parsed[1].attrib["id"] == "parent"
+    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#parent"
 
 
 def test_append_swap_oob_exception_if_additional_has_more_than_one_root_element():
@@ -53,37 +100,3 @@ def test_swap_oob_exception_if_additional_has_no_id():
 
     with pytest.raises(Exception, match="id attribute"):
         test()
-
-
-def test_append_swap_oob_child_element_return_parent_element(rf: RequestFactory):
-    @element()
-    def parent(_request):
-        return HttpResponse("parent")
-
-    @element()
-    def child(request):
-        hook_swap_oob(request, parent(request))
-        return HttpResponse("child")
-
-    response = child(rf.get("/"))
-    parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
-    assert parsed[0].attrib["id"] == "child"
-    assert parsed[1].attrib["id"] == "parent"
-    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#parent"
-
-
-def test_hook_swap_oob_with_action_view_function(rf: RequestFactory):
-    @element()
-    def el(_request):
-        return HttpResponse("parent")
-
-    @view()
-    def action(request):
-        hook_swap_oob(request, el(request))
-        return HttpResponse("<dummy></dummy>")
-
-    response = action(rf.get("/"))
-    parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(response))
-    assert parsed[0].tag == "dummy"
-    assert parsed[1].attrib["id"] == "el"
-    assert parsed[1].attrib["hx-swap-oob"] == "outerHTML:#el"

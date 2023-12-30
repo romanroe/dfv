@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dfv"
-version = "0.32.0"
+version = "0.33.0"
 description = "Django Function Views"
 authors = ["Roman Roelofsen <romanroe@gmail.com>"]
 license = "MIT"
@@ -102,7 +102,7 @@ norecursedirs = [
 [tool.pytest-watcher]
 now = true
 delay = 0.2
-runner_args = ["-n", "0", "--no-header"]
+runner_args = ["-n", "0", "--no-header", "--lf"]
 
 [tool.mypy]
 warn_return_any = false

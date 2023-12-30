@@ -79,7 +79,7 @@ def to_str(model):
 @register.tag()
 def reverse_view(parser, token):
     parts = token.split_contents()[1:]
-    if parts[-2] == "as":
+    if len(parts) > 3 and parts[-2] == "as":
         viewfn, params, var_name = parts[0], parts[1:-2], parts[-1]
     else:
         viewfn, params, var_name = parts[0], parts[1:], None
@@ -110,7 +110,7 @@ class ReverseViewNode(template.Node):
         args = [arg.resolve(context) for arg in self.args]
         kwargs = {k: v.resolve(context) for k, v in self.kwargs.items()}
 
-        url = reverse_view_fn(viewfn_var, *args, **kwargs)
+        url = reverse_view_fn(viewfn_var, None, None, args=args, kwargs=kwargs)
         if self.var_name:
             context[self.var_name] = url
             return ""

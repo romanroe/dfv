@@ -4,7 +4,7 @@ from django.forms import BaseForm
 from django.http import HttpRequest, QueryDict
 
 from dfv import is_patch, is_post, is_put
-from dfv.view_stack import is_view_fn_request_target
+from dfv.view_stack import is_view_fn_stack_at_root
 
 T_FORM = TypeVar("T_FORM", bound=BaseForm)
 
@@ -14,7 +14,7 @@ def _convert_querydict_to_initial_values(qd: QueryDict) -> dict[str, str]:
 
 
 def create_form(request: HttpRequest, form_class: type[T_FORM], **kwargs) -> T_FORM:
-    if not is_view_fn_request_target(request):
+    if not is_view_fn_stack_at_root(request):
         form = form_class(**kwargs)
     elif is_patch(request):
         qd = QueryDict(request.body, encoding=request.encoding)

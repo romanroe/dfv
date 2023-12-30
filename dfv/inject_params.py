@@ -11,7 +11,6 @@ from typing import (
     cast,
     get_args,
     get_origin,
-    Literal,
     Optional,
     Type,
     TypeVar,
@@ -26,18 +25,12 @@ from dfv.utils import _get_request_from_args, querydict_key_removed
 VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 
 
-def inject_args(
-    *,
-    auto_param: bool | Literal["get", "post"] = False,
-    # auto_form: Optional[bool | str] = True,
-) -> Callable[[VIEW_FN], VIEW_FN]:
+def inject_params() -> Callable[[VIEW_FN], VIEW_FN]:
     def decorator(fn: VIEW_FN) -> VIEW_FN:
         parameters: list[inspect.Parameter] = list(
             inspect.signature(fn).parameters.values()
         )
-        injected_params = _extract_injected_params(
-            fn, parameters, auto_param  # , auto_form
-        )
+        injected_params = _extract_injected_params(fn, parameters)
         arg_names = [p.name for p in parameters]
 
         @functools.wraps(fn)
@@ -57,10 +50,6 @@ def inject_args(
         return cast(VIEW_FN, inner)
 
     return decorator
-
-
-# alias, to allow parameters to be named handle_args
-# _inject_args = inject_args
 
 
 @dataclass
@@ -95,7 +84,7 @@ def _setup_injected_param(
         if parameter.default is not inspect.Parameter.empty
         and not isinstance(parameter.default, InjectedParam)
         else type(parameter.default.default)
-        if isinstance(parameter.default, InjectedParamQuery)
+        if isinstance(parameter.default, QueryParam)
         and parameter.default.default is not None
         else str
     )
@@ -107,8 +96,6 @@ def _setup_injected_param(
 def _extract_injected_params(
     view_fn: Callable[[Any], Any],
     parameters: list[inspect.Parameter],
-    auto_param: bool | Literal["get"] | Literal["post"],
-    # auto_form: Optional[bool | str] = True,
 ) -> dict[str, InjectedParam]:
     """
     Extracts all injected parameters from the given list of function arguments.
@@ -118,47 +105,10 @@ def _extract_injected_params(
     # skip first request parameter
     parameters = parameters[1:]
 
-    # found_form_arg = False
     for arg in parameters:
         if isinstance(arg.default, InjectedParam):
             ip: InjectedParam = arg.default
             result[ip.name] = _setup_injected_param(view_fn, ip, arg.name, arg)
-
-        # elif arg.default == inspect.Parameter.empty:
-        else:
-            default_value = (
-                arg.default if arg.default != inspect.Parameter.empty else None
-            )
-            # handle form
-            # if (
-            #     auto_form
-            #     and isinstance(arg.annotation, type)
-            #     and issubclass(arg.annotation, forms.BaseForm)
-            # ):
-            #     if found_form_arg:
-            #         raise Exception(
-            #             "You can only have one Form argument in a view function."
-            #         )
-            #     found_form_arg = True
-            #     result[arg.name] = _setup_injected_param(
-            #         view_fn, handle_form(), arg.name, arg
-            #     )
-            # from here, handle get and post params
-            if auto_param is True:
-                result[arg.name] = _setup_injected_param(
-                    view_fn, InjectedParamQuery(default=default_value), arg.name, arg
-                )
-            elif auto_param == "get":
-                result[arg.name] = _setup_injected_param(
-                    view_fn, InjectedParamQueryGet(default=default_value), arg.name, arg
-                )
-            elif auto_param == "post":
-                result[arg.name] = _setup_injected_param(
-                    view_fn,
-                    InjectedParamQueryPost(default=default_value),
-                    arg.name,
-                    arg,
-                )
 
     return result
 
@@ -169,27 +119,50 @@ def _extract_injected_params(
 
 
 @dataclasses.dataclass
-class InjectedParamQuery(InjectedParam):
+class QueryParam(InjectedParam):
     query_param_name: Optional[str] = dataclasses.field(default=None)
     default: Any = dataclasses.field(default=None)
     consume: bool = dataclasses.field(default=True)
+    methods: typing.Iterable[
+        typing.Literal["GET", "POST", "PUT", "DELETE", "PATCH", "__all__"]
+    ] = dataclasses.field(default=("GET",))
+    parse_form_urlencoded_body: bool = dataclasses.field(default=False)
+
+    def __post_init__(self):
+        if "__all__" in self.methods:
+            self.methods = ("GET", "POST", "PUT", "DELETE", "PATCH")
 
     def check(self):
         if self.query_param_name is None:
             self.query_param_name = self.name
 
     def _create_lookup_dict(self, request: HttpRequest):
-        getqd = cast(QueryDict, request.GET)
-        getd = {name: getqd.getlist(name) for name in getqd}
-        postqd = cast(QueryDict, request.POST)
-        postd = {name: postqd.getlist(name) for name in postqd}
+        combined_qd = QueryDict(mutable=True)
 
-        formqd = QueryDict(mutable=True)
-        if request.content_type == "application/x-www-form-urlencoded":
+        if "POST" in self.methods:
+            postqd = cast(QueryDict, request.POST)
+            postd = {name: postqd.getlist(name) for name in postqd}
+            combined_qd.update(postd)
+
+        if "GET" in self.methods:
+            getqd = cast(QueryDict, request.GET)
+            getd = {name: getqd.getlist(name) for name in getqd}
+            combined_qd.update(getd)
+
+        if (
+            request.method in self.methods
+            and self.parse_form_urlencoded_body
+            and request.content_type == "application/x-www-form-urlencoded"
+        ):
+            formqd = QueryDict(mutable=True)
             formqd.update(
                 QueryDict(request.body, mutable=True, encoding=request.encoding)
             )
-        return postd | getd | formqd
+            for name in formqd.keys():
+                if name not in combined_qd:
+                    combined_qd[name] = formqd.getlist(name)
+
+        return combined_qd
 
     def _consume_param(self, request: HttpRequest):
         if self.query_param_name in request.GET:
@@ -222,45 +195,27 @@ class InjectedParamQuery(InjectedParam):
         return _convert_value_to_type(values, self.target_type)
 
 
-@dataclasses.dataclass
-class InjectedParamQueryGet(InjectedParamQuery):
-    def _create_lookup_dict(self, request: HttpRequest):
-        qd = cast(QueryDict, request.GET)
-        return {name: qd.getlist(name) for name in qd}
-
-    def _consume_param(self, request: HttpRequest):
-        if self.query_param_name in request.GET:
-            request.GET = querydict_key_removed(
-                cast(Any, request.GET), self.query_param_name
-            )
-
-
-@dataclasses.dataclass
-class InjectedParamQueryPost(InjectedParamQuery):
-    def _create_lookup_dict(self, request: HttpRequest):
-        qd = cast(QueryDict, request.POST)
-        return {name: qd.getlist(name) for name in qd}
-
-    def _consume_param(self, request: HttpRequest):
-        if self.query_param_name in request.POST:
-            request.POST = querydict_key_removed(
-                cast(Any, request.POST), self.query_param_name
-            )
-
-
-def param_get(default=None, consume=True) -> Any:
-    return InjectedParamQueryGet(default=default, consume=consume)
-
-
-def param_post(default=None, consume=True) -> Any:
-    return InjectedParamQueryPost(default=default, consume=consume)
-
-
 T = TypeVar("T")
 
 
-def param(default: T = cast(Any, None), consume=True) -> T:
-    return cast(T, InjectedParamQuery(default=default, consume=consume))
+def param(
+    default: T = cast(Any, None),
+    *,
+    methods: typing.Iterable[
+        typing.Literal["GET", "POST", "PUT", "DELETE", "PATCH", "__all__"]
+    ] = ("GET", "POST"),
+    parse_form_urlencoded_body: bool = True,
+    consume=True,
+) -> T:
+    return cast(
+        T,
+        QueryParam(
+            default=default,
+            consume=consume,
+            methods=methods,
+            parse_form_urlencoded_body=parse_form_urlencoded_body,
+        ),
+    )
 
 
 def check_and_return_model_type(target_type: Any) -> Type[models.Model] | None:

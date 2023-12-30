@@ -8,28 +8,28 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.test import RequestFactory
 
-from dfv import inject_args, param, param_get, param_post, view
-from dfv.inject_args import ObjectDoesNotExistWithPk
+from dfv import inject_params, param
+from dfv.inject_params import ObjectDoesNotExistWithPk
 from main.models import AppUser
 
 
 def test_without_type_annotation(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(
         _request,
-        p1=param_get(),
-        p2=param_get(),
+        p1=param(),
+        p2=param(),
     ):
-        assert p1 == "a"
-        assert p2 == "b"
+        assert p1 == "aaa"
+        assert p2 == "bbb"
         return HttpResponse("")
 
-    result = viewfn(rf.get("/?p1=a&p2=b"))
+    result = viewfn(rf.get("/?p1=aaa&p2=bbb"))
     assert result.status_code == 200
 
 
 def test_param_default_defines_target_type(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, p1=param(default=123)):
         assert p1 == 999
         return HttpResponse("")
@@ -39,8 +39,8 @@ def test_param_default_defines_target_type(rf: RequestFactory):
 
 
 def test_missing_param_raises_exception(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1=param_get()):
+    @inject_params()
+    def viewfn(_request, p1=param()):
         assert p1 == 1
 
     def test():
@@ -51,10 +51,10 @@ def test_missing_param_raises_exception(rf: RequestFactory):
 
 
 def test_optional(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(
         _request,
-        p1: Optional[str] = param_get(),
+        p1: Optional[str] = param(),
     ):
         assert p1 is None
 
@@ -62,10 +62,10 @@ def test_optional(rf: RequestFactory):
 
 
 def test_optional_as_union(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(
         _request,
-        p1: str | None = param_get(),
+        p1: str | None = param(),
     ):
         assert p1 is None
 
@@ -73,10 +73,10 @@ def test_optional_as_union(rf: RequestFactory):
 
 
 def test_optional_with_type_conversion(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(
         _request,
-        p1: Optional[int] = param_get(),
+        p1: Optional[int] = param(),
     ):
         assert p1 == 1
 
@@ -84,24 +84,24 @@ def test_optional_with_type_conversion(rf: RequestFactory):
 
 
 def test_type_conversion_int(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1: int = param_get()):
+    @inject_params()
+    def viewfn(_request, p1: int = param()):
         assert p1 == 1
 
     viewfn(rf.get("/?p1=1"))
 
 
 def test_type_conversion_with_exception(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1: int | ValueError = param_get()):
+    @inject_params()
+    def viewfn(_request, p1: int | ValueError = param()):
         assert isinstance(p1, ValueError)
 
     viewfn(rf.get("/?p1=a"))
 
 
 def test_type_conversion_float(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1: float = param_get()):
+    @inject_params()
+    def viewfn(_request, p1: float = param()):
         assert p1 == 1.1
         # assert type(p1) == float
         assert isinstance(p1, float)
@@ -110,12 +110,12 @@ def test_type_conversion_float(rf: RequestFactory):
 
 
 def test_type_conversion_bool(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(
         _request,
-        p1: bool = param_get(),
-        p2: bool = param_get(),
-        p3: bool = param_get(),
+        p1: bool = param(),
+        p2: bool = param(),
+        p3: bool = param(),
     ):
         assert not p1
         assert not p2
@@ -125,8 +125,8 @@ def test_type_conversion_bool(rf: RequestFactory):
 
 
 def test_type_conversion_list_unannotated(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1: list = param_get()):
+    @inject_params()
+    def viewfn(_request, p1: list = param()):
         assert type(p1) == list
         assert "a" in p1
         assert "b" in p1
@@ -135,8 +135,8 @@ def test_type_conversion_list_unannotated(rf: RequestFactory):
 
 
 def test_type_conversion_list_annotated(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1: list[int] = param_get()):
+    @inject_params()
+    def viewfn(_request, p1: list[int] = param()):
         assert type(p1) == list
         assert 1 in p1
         assert 2 in p1
@@ -146,7 +146,7 @@ def test_type_conversion_list_annotated(rf: RequestFactory):
 
 @pytest.mark.django_db
 def test_type_conversion_model(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: AppUser = param()):
         assert user is not None
 
@@ -156,7 +156,7 @@ def test_type_conversion_model(rf: RequestFactory):
 
 @pytest.mark.django_db
 def test_type_conversion_model_wrong_id_object_does_not_exist_type(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: AppUser | ObjectDoesNotExist = param()):
         assert isinstance(user, ObjectDoesNotExist)
 
@@ -169,7 +169,7 @@ def test_type_conversion_model_wrong_id_object_does_not_exist__with_pktype(
 ):
     wrong_id = uuid4()
 
-    @view()
+    @inject_params()
     def viewfn(_request, user: AppUser | ObjectDoesNotExistWithPk = param()):
         assert isinstance(user, ObjectDoesNotExistWithPk)
         assert user.pk == str(wrong_id)
@@ -179,7 +179,7 @@ def test_type_conversion_model_wrong_id_object_does_not_exist__with_pktype(
 
 @pytest.mark.django_db
 def test_type_conversion_model_wrong_id_model_does_not_exist_type(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: AppUser | AppUser.DoesNotExist = param()):  # type: ignore
         assert isinstance(user, AppUser.DoesNotExist)
 
@@ -188,7 +188,7 @@ def test_type_conversion_model_wrong_id_model_does_not_exist_type(rf: RequestFac
 
 @pytest.mark.django_db
 def test_type_conversion_model_with_optional(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: Optional[AppUser] = param()):
         assert user is not None
 
@@ -198,7 +198,7 @@ def test_type_conversion_model_with_optional(rf: RequestFactory):
 
 @pytest.mark.django_db
 def test_type_conversion_model_with_optional_value_is_none(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: Optional[AppUser] = param()):
         assert user is None
 
@@ -207,7 +207,7 @@ def test_type_conversion_model_with_optional_value_is_none(rf: RequestFactory):
 
 @pytest.mark.django_db
 def test_type_conversion_model_with_union_none(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: AppUser | None = param()):
         assert user is not None
 
@@ -217,7 +217,7 @@ def test_type_conversion_model_with_union_none(rf: RequestFactory):
 
 @pytest.mark.django_db
 def test_type_conversion_model_with_union_none_value_is_none(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, user: AppUser | None = param()):
         assert user is None
 
@@ -225,11 +225,11 @@ def test_type_conversion_model_with_union_none_value_is_none(rf: RequestFactory)
 
 
 def test_post(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(
         _request,
-        p1: str = param_post(),
-        p2: str = param_post(),
+        p1: str = param(methods=["POST"]),
+        p2: str = param(methods=["POST"]),
     ):
         assert p1 == "a"
         assert p2 == "b"
@@ -238,22 +238,26 @@ def test_post(rf: RequestFactory):
 
 
 def test_patch(rf: RequestFactory):
-    @view()
-    def viewfn(_request, p1: str = param(), p2: str = param()):
-        assert p1 == "a"
-        assert p2 == "b"
+    @inject_params()
+    def viewfn(
+        _request,
+        p1: str = param(methods=["PATCH"], parse_form_urlencoded_body=True),
+        p2: str = param(methods=["PATCH"], parse_form_urlencoded_body=True),
+    ):
+        assert p1 == "aaa"
+        assert p2 == "bbb"
 
     viewfn(
         rf.patch(
             "/",
-            urlencode({"p1": "a", "p2": "b"}),
+            urlencode({"p1": "aaa", "p2": "bbb"}),
             content_type="application/x-www-form-urlencoded",
         )
     )
 
 
 def test_get_and_post_order(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, p1: str = param()):
         assert p1 == "a"
 
@@ -261,7 +265,7 @@ def test_get_and_post_order(rf: RequestFactory):
 
 
 def test_function_call_arg_overrides_param(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, p1: str = param()):
         assert p1 == "b"
 
@@ -269,7 +273,7 @@ def test_function_call_arg_overrides_param(rf: RequestFactory):
 
 
 def test_function_call_kwarg_overrides_param(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, p1: str = param()):
         assert p1 == "b"
 
@@ -277,7 +281,7 @@ def test_function_call_kwarg_overrides_param(rf: RequestFactory):
 
 
 def test_param_consume_true(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(request, p1: str = param()):
         assert p1 == "a"
         assert "p1" not in request.GET
@@ -286,7 +290,7 @@ def test_param_consume_true(rf: RequestFactory):
 
 
 def test_param_consume_false(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(request, p1: str = param(consume=False)):
         assert p1 == "a"
         assert "p1" in request.GET
@@ -295,8 +299,8 @@ def test_param_consume_false(rf: RequestFactory):
 
 
 def test_param_consume_get(rf: RequestFactory):
-    @view()
-    def viewfn(request, p1: str = param_get()):
+    @inject_params()
+    def viewfn(request, p1: str = param()):
         assert p1 == "a"
         assert "p1" not in request.GET
 
@@ -304,8 +308,8 @@ def test_param_consume_get(rf: RequestFactory):
 
 
 def test_param_consume_post(rf: RequestFactory):
-    @view()
-    def viewfn(request, p1: str = param_post()):
+    @inject_params()
+    def viewfn(request, p1: str = param(methods=["POST"])):
         assert p1 == "a"
         assert "p1" not in request.POST
 
@@ -313,7 +317,7 @@ def test_param_consume_post(rf: RequestFactory):
 
 
 def test_auto_default_value(rf: RequestFactory):
-    @view()
+    @inject_params()
     def viewfn(_request, p1: str = param(default="a")):
         assert p1 == "a"
 
@@ -321,103 +325,62 @@ def test_auto_default_value(rf: RequestFactory):
     untyped_viewfn(rf.get("/"))
 
 
-def test_auto_param_false(rf: RequestFactory):
-    @inject_args(auto_param=False)
-    def viewfn(_request, p1: str):
-        assert p1 == "a"
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-
-    def test():
-        untyped_viewfn(rf.get("/?p1=a"))
-
-    with pytest.raises(Exception, match="missing 1 required positional argument: 'p1'"):
-        test()
-
-
-def test_auto_param_true(rf: RequestFactory):
-    @inject_args(auto_param=True)
-    def viewfn(_request, p1: str):
-        assert p1 == "a"
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-    untyped_viewfn(rf.get("/?p1=a"))
-
-
-def test_auto_param_get(rf: RequestFactory):
-    @inject_args(auto_param="get")
-    def viewfn(_request, p1: str):
-        assert p1 == "a"
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-    untyped_viewfn(rf.get("/?p1=a"))
-
-
-def test_auto_param_get_does_not_receive_post_params(rf: RequestFactory):
-    @inject_args(auto_param="get")
-    def viewfn(_request, p1: str, p2="b"):
-        assert p1 == "a"
-        assert p2 == "b"
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-    untyped_viewfn(rf.post("/?p1=a", {"p2": "x"}))
-
-
-def test_auto_param_post(rf: RequestFactory):
-    @inject_args(auto_param="post")
-    def viewfn(_request, p1: str):
-        assert p1 == "a"
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-    untyped_viewfn(rf.post("/", {"p1": "a"}))
-
-
-def test_auto_param_post_does_not_receive_get_params(rf: RequestFactory):
-    @inject_args(auto_param="post")
-    def viewfn(_request, p1: str, p2="b"):
-        assert p1 == "a"
-        assert p2 == "b"
-
-    untyped_viewfn = typing.cast(Any, viewfn)
-    untyped_viewfn(rf.post("/p2=x", {"p1": "a"}))
-
-
-# def test_auto_param_form():
-#     class TestForm(forms.Form):
-#         p1 = forms.TextInput()
-#         p2 = forms.TextInput()
-#
-#     @view()
-#     def viewfn(_request, form: TestForm):
-#         assert type(form) == TestForm
+# def test_auto_param_false(rf: RequestFactory):
+#     @inject_args(auto_param=False)
+#     def viewfn(_request, p1: str):
+#         assert p1 == "a"
 #
 #     untyped_viewfn = typing.cast(Any, viewfn)
-#     untyped_viewfn(create_resolved_request(viewfn, "POST", {"p1": "a", "p2": "b"}))
-
-
-# def test_multiple_form_params_raises_exception():
-#     class TestForm(forms.Form):
-#         p1 = forms.TextInput()
-#         p2 = forms.TextInput()
 #
 #     def test():
-#         @view()
-#         def viewfn(_request, _form1: TestForm, _form2: TestForm):
-#             pass
+#         untyped_viewfn(rf.get("/?p1=a"))
 #
-#     with pytest.raises(
-#         Exception, match="You can only have one Form argument in a view function"
-#     ):
+#     with pytest.raises(Exception, match="missing 1 required positional argument: 'p1'"):
 #         test()
 
 
-# def test_auto_param_form_is_false(rf: RequestFactory):
-#     class TestForm(forms.Form):
-#         p1 = forms.TextInput()
-#         p2 = forms.TextInput()
+# def test_auto_param_true(rf: RequestFactory):
+#     @inject_args(auto_param=True)
+#     def viewfn(_request, p1: str):
+#         assert p1 == "a"
 #
-#     @inject_args(auto_form=False)
-#     def viewfn(_request, form: Optional[TestForm] = None):
-#         assert form is None
+#     untyped_viewfn = typing.cast(Any, viewfn)
+#     untyped_viewfn(rf.get("/?p1=a"))
+
+
+# def test_auto_param_get(rf: RequestFactory):
+#     @inject_args(auto_param="get")
+#     def viewfn(_request, p1: str):
+#         assert p1 == "a"
 #
-#     viewfn(rf.post("/", {"p1": "a", "p2": "b"}))
+#     untyped_viewfn = typing.cast(Any, viewfn)
+#     untyped_viewfn(rf.get("/?p1=a"))
+
+
+# def test_auto_param_get_does_not_receive_post_params(rf: RequestFactory):
+#     @inject_args(auto_param="get")
+#     def viewfn(_request, p1: str, p2="b"):
+#         assert p1 == "a"
+#         assert p2 == "b"
+#
+#     untyped_viewfn = typing.cast(Any, viewfn)
+#     untyped_viewfn(rf.post("/?p1=a", {"p2": "x"}))
+
+
+# def test_auto_param_post(rf: RequestFactory):
+#     @inject_args(auto_param="post")
+#     def viewfn(_request, p1: str):
+#         assert p1 == "a"
+#
+#     untyped_viewfn = typing.cast(Any, viewfn)
+#     untyped_viewfn(rf.post("/", {"p1": "a"}))
+
+
+# def test_auto_param_post_does_not_receive_get_params(rf: RequestFactory):
+#     @inject_args(auto_param="post")
+#     def viewfn(_request, p1: str, p2="b"):
+#         assert p1 == "a"
+#         assert p2 == "b"
+#
+#     untyped_viewfn = typing.cast(Any, viewfn)
+#     untyped_viewfn(rf.post("/p2=x", {"p1": "a"}))

@@ -68,6 +68,7 @@ MIDDLEWARE = [
     "django_htmx.middleware.HtmxMiddleware",
     "django_browser_reload.middleware.BrowserReloadMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "dfv.middleware.DFVMiddleware",
 ]
 
 ROOT_URLCONF = "project.urls"

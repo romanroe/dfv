@@ -1,6 +1,5 @@
 from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory
-from django.urls import path
 
 from dfv import view
 from dfv.route import create_path, get_path_name_for_view_callable, reverse_view

@@ -34,7 +34,7 @@ def get_view_fn_call_stack_from_request_or_raise(
     return stack
 
 
-def is_view_fn_request_target(request: HttpRequest) -> bool:
+def is_view_fn_stack_at_root(request: HttpRequest) -> bool:
     stack = get_view_fn_call_stack_from_request_or_raise(request)
     return len(stack) == 1
     # if len(stack) != 1:
@@ -46,37 +46,37 @@ def is_view_fn_request_target(request: HttpRequest) -> bool:
     # )
 
 
-def is_head(request: HttpRequest, ignore_resolved_view=True) -> bool:
+def is_head(request: HttpRequest, ignore_view_stack=True) -> bool:
     return (
-        ignore_resolved_view or is_view_fn_request_target(request)
+        ignore_view_stack or is_view_fn_stack_at_root(request)
     ) and request.method == "HEAD"
 
 
-def is_get(request: HttpRequest, ignore_resolved_view=True) -> bool:
+def is_get(request: HttpRequest, ignore_view_stack=True) -> bool:
     return (
-        ignore_resolved_view or is_view_fn_request_target(request)
+        ignore_view_stack or is_view_fn_stack_at_root(request)
     ) and request.method == "GET"
 
 
-def is_post(request: HttpRequest, ignore_resolved_view=False) -> bool:
+def is_post(request: HttpRequest, ignore_view_stack=False) -> bool:
     return (
-        ignore_resolved_view or is_view_fn_request_target(request)
+        ignore_view_stack or is_view_fn_stack_at_root(request)
     ) and request.method == "POST"
 
 
-def is_put(request: HttpRequest, ignore_resolved_view=False) -> bool:
+def is_put(request: HttpRequest, ignore_view_stack=False) -> bool:
     return (
-        ignore_resolved_view or is_view_fn_request_target(request)
+        ignore_view_stack or is_view_fn_stack_at_root(request)
     ) and request.method == "PUT"
 
 
-def is_patch(request: HttpRequest, ignore_resolved_view=False) -> bool:
+def is_patch(request: HttpRequest, ignore_view_stack=False) -> bool:
     return (
-        ignore_resolved_view or is_view_fn_request_target(request)
+        ignore_view_stack or is_view_fn_stack_at_root(request)
     ) and request.method == "PATCH"
 
 
-def is_delete(request: HttpRequest, ignore_resolved_view=False) -> bool:
+def is_delete(request: HttpRequest, ignore_view_stack=False) -> bool:
     return (
-        ignore_resolved_view or is_view_fn_request_target(request)
+        ignore_view_stack or is_view_fn_stack_at_root(request)
     ) and request.method == "DELETE"

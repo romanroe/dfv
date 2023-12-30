@@ -1,6 +1,6 @@
 {% load dfv %}
 
-{#<div>{% reverse_view view 1 2 "a b" a=3 b=4 %}</div>#}
+{#<div>{% reverse_view view a=3 b=4 %}</div>#}
 {#<div>{% reverse_view view 1 2 "a b" a=3 b=4 as foo %}</div>#}
 {#<div>{% reverse_view view 1 2 as foo %}</div>#}
 {#<div>{% reverse_view view 1 2 a=3 b="x y" as foo %}</div>#}
@@ -11,6 +11,11 @@
 {#<div>{% url 'demo_address_book-views-list_element' dummy="abc"|upper as foo2 %}</div>#}
 {#<div>1: {{ foo1 }}</div>#}
 {#<div>2: {{ foo2 }}</div>#}
+
+<input type="text" class="state" name="foo" value="123"/>
+<div hx-post="{% url "foo" %}" hx-include=".state" hx-trigger="load" hx-swap="innerHTML" hx-target="this">
+    fdsfds
+</div>
 
 <div>
 
@@ -26,19 +31,15 @@
         />
     </div>
 
-    <div id="person-list"
-         class="list-group list-group-flush"
-         hx-boost="true"
-         hx-target="#body"
-         hx-select="#body"
-         hx-include="previous input"
-    >
+    <div id="person-list" class="list-group list-group-flush">
 
         {% for person in persons %}
             <div>
-
-                <a href="{{ request.path }}"
-                    {% hx_vals person_id=person.id|to_str %}
+                <a href="#"
+                   _="on click take .active from #person-list > .list-group-item"
+                   hx-get="{% reverse_view detail_element person.id %}"
+                   hx-target="#detail-element-wrapper"
+                   hx-swap="innerHTML"
                    class="list-group-item list-group-item-action {% if person.id == person_id %}active{% endif %}"
                 >
                     {{ person.first_name }} {{ person.last_name }}

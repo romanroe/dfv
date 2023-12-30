@@ -1,17 +1,11 @@
-import functools
 from inspect import signature, Signature
 from typing import Any, Callable, cast
 from uuid import UUID
 
 from django.urls import (
-    get_resolver,
-    get_urlconf,
     path,
     reverse,
-    URLPattern,
-    URLResolver,
 )
-from icecream import ic
 
 
 def get_path_name_for_view_callable(view: Callable, include_module=True) -> str:
@@ -66,7 +60,9 @@ def create_path(
 #     return path(subroute, view, name=name)
 
 
-def reverse_view(view: Callable, urlconf=None, current_app=None, *args, **kwargs):
+def reverse_view(
+    view: Callable, urlconf=None, current_app=None, args=None, kwargs=None
+):
     if not (path_name := getattr(view, "__dfv_path_name__", None)):
         raise Exception("This view was not registered with create_path().")
 

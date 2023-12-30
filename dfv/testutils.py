@@ -1,7 +1,10 @@
 from typing import Callable, Literal
 
+from django.http import HttpResponse
 from django.test import RequestFactory
 from django.urls import path, resolve
+
+from dfv.middleware import DFVMiddleware
 
 
 def create_resolved_request(
@@ -15,3 +18,10 @@ def create_resolved_request(
     )
     test_request.resolver_match = resolved
     return test_request
+
+
+def call_with_middleware(rf: RequestFactory, view_fn, *args, **kwargs) -> HttpResponse:
+    m = DFVMiddleware(lambda r: view_fn(r, *args, **kwargs))
+    request = rf.get("/")
+    m.process_view(request, view_fn, args, kwargs)
+    return m(request)

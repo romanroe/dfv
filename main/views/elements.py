@@ -3,7 +3,7 @@ from datetime import datetime
 from django.http import HttpRequest
 from django.shortcuts import render
 
-from dfv import element, param, view
+from dfv import element, is_post, param, view
 from dfv.element import body_response
 from dfv.htmx import swap_oob
 from dfv.route import create_path
@@ -51,17 +51,20 @@ def level3a_element(
         },
     )
 
-    match action:
-        case "page":
-            return body_response(level1_page(request))
-        case "2":
-            return swap_oob(response, level2_element(request, source="level3a_element"))
-        case "3a_3b":
-            return swap_oob(
-                response, level3b_element(request, source="level3a_element")
-            )
-        case "replace":
-            return level3b_element(request, "replace")
+    if is_post(request):
+        match action:
+            case "page":
+                return body_response(level1_page(request))
+            case "2":
+                return swap_oob(
+                    response, level2_element(request, source="level3a_element")
+                )
+            case "3a_3b":
+                return swap_oob(
+                    response, level3b_element(request, source="level3a_element")
+                )
+            case "replace":
+                return level3b_element(request, "replace")
 
     return response
 

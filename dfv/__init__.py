@@ -1,12 +1,9 @@
 # ruff: noqa: F401
 
 from .element import element, ElementResponse
-from .inject_args import (
-    # handle_form,
-    inject_args,
+from .inject_params import (
+    inject_params,
     param,
-    param_get,
-    param_post,
 )
 from .view import view
 from .view_stack import (
