@@ -1,7 +1,7 @@
 import functools
+from dataclasses import dataclass, field
 from typing import Any, Callable, cast, Optional
 
-import wrapt
 from django.http import HttpRequest, HttpResponse
 from django_htmx.http import reswap, retarget
 
@@ -26,71 +26,27 @@ from dfv.view import view, VIEW_FN, ViewResponse
 #     return main, swaps
 
 
-class ElementRequest(wrapt.ObjectProxy, HttpRequest):
-    def __init__(
-        self,
-        wrapped: HttpRequest,
-        element_id: Optional[str] = None,
-        tag="div",
-        hx_target="this",
-        hx_swap="outerHTML",
-        attrs: dict[str, str] | None = None,
-    ):
-        super().__init__(wrapped)
-        self._self_element_id = element_id
-        self._self_tag = tag
-        self._self_hx_target = hx_target
-        self._self_hx_swap = hx_swap
-        self._self_attrs = attrs if attrs is not None else {}
-        self._self_nowrap = False
+@dataclass()
+class ElementMeta:
+    element_id: Optional[str] = None
+    tag: str = "div"
+    hx_target: str = "this"
+    hx_swap: str = "outerHTML"
+    attrs: dict[str, str] = field(default_factory=dict)
+    nowrap: bool = False
 
-    @property
-    def element_id(self):
-        return self._self_element_id
-
-    @element_id.setter
-    def element_id(self, value):
-        self._self_element_id = value
-
-    @property
-    def tag(self):
-        return self._self_tag
-
-    @tag.setter
-    def tag(self, value):
-        self._self_tag = value
-
-    @property
-    def hx_target(self):
-        return self._self_hx_target
-
-    @hx_target.setter
-    def hx_target(self, value):
-        self._self_hx_target = value
-
-    @property
-    def hx_swap(self):
-        return self._self_hx_swap
-
-    @hx_swap.setter
-    def hx_swap(self, value):
-        self._self_hx_swap = value
-
-    @property
-    def attrs(self):
-        return self._self_attrs
-
-    @attrs.setter
-    def attrs(self, value):
-        self._self_attrs = value
-
-    @property
-    def nowrap(self):
-        return self._self_nowrap
-
-    @nowrap.setter
-    def nowrap(self, value):
-        self._self_nowrap = value
+    # @staticmethod
+    # def set_in_request(request) -> "ElementMeta":
+    #     meta = ElementMeta()
+    #     setattr(request, "__dfv_element_meta", meta)
+    #     return meta
+    #
+    # @staticmethod
+    # def get_from_request(request: HttpRequest, create=False) -> Optional["ElementMeta"]:
+    #     meta = getattr(request, "__dfv_element_meta", None)
+    #     if meta is None and create:
+    #         meta = ElementMeta.set_in_request(request)
+    #     return meta
 
 
 class ElementResponse(ViewResponse):
@@ -99,25 +55,19 @@ class ElementResponse(ViewResponse):
         return ElementResponse(HttpResponse())
 
     @staticmethod
-    def wrap_response(response: HttpResponse) -> HttpResponse:
-        return ElementResponse(response)
-
-    @staticmethod
-    def wrap_element_response(
-        request: ElementRequest, response: HttpResponse
-    ) -> HttpResponse:
-        if request.nowrap:
+    def wrap(response: HttpResponse, meta: ElementMeta) -> HttpResponse:
+        if meta.nowrap:
             return response
 
-        attr_id = f"id='{request.element_id}'" if request.element_id is not None else ""
-        attr_hx_target = f"hx-target='{request.hx_target}'" if request.hx_target else ""
-        attr_hx_swap = f"hx-swap='{request.hx_swap}'" if request.hx_swap else ""
-        attrs_str = " ".join(f'{k}="{v}"' for k, v in request.attrs.items())
+        attr_id = f"id='{meta.element_id}'" if meta.element_id is not None else ""
+        attr_hx_target = f"hx-target='{meta.hx_target}'" if meta.hx_target else ""
+        attr_hx_swap = f"hx-swap='{meta.hx_swap}'" if meta.hx_swap else ""
+        attrs_str = " ".join(f'{k}="{v}"' for k, v in meta.attrs.items())
         content = response_to_str(response)
         wrapped = (
-            f"""<{request.tag} {attr_id} {attr_hx_target} {attr_hx_swap} {attrs_str}>"""
+            f"""<{meta.tag} {attr_id} {attr_hx_target} {attr_hx_swap} {attrs_str}>"""
             f"""{content}"""
-            f"""</{request.tag}>"""
+            f"""</{meta.tag}>"""
         )
         response.content = bytes(wrapped, "UTF-8")
 
@@ -130,7 +80,7 @@ class ElementResponse(ViewResponse):
 def body_response(response: HttpResponse, hx_swap="outerHTML") -> HttpResponse:
     response = retarget(response, "body")
     response = reswap(response, cast(Any, hx_swap))
-    return ElementResponse.wrap_response(response)
+    return ElementResponse(response)
 
 
 def element(
@@ -155,17 +105,24 @@ def element(
         @functools.wraps(f)
         def inner(*args, **kwargs) -> HttpResponse:
             request: HttpRequest = args[0]
-            element_request = ElementRequest(
-                request, id, tag, hx_target, hx_swap, attrs
-            )
-            response = f(element_request, *args[1:], **kwargs)
+            response = f(request, *args[1:], **kwargs)
+
             if not response["Content-Type"].startswith("text/html"):
                 return response
 
             if isinstance(response, ElementResponse):
                 return response
 
-            return ElementResponse.wrap_element_response(element_request, response)
+            return ElementResponse.wrap(
+                response,
+                ElementMeta(
+                    element_id=id,
+                    tag=tag,
+                    hx_target=hx_target,
+                    hx_swap=hx_swap,
+                    attrs=attrs or {},
+                ),
+            )
 
         return cast(VIEW_FN, inner)
 

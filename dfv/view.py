@@ -12,7 +12,7 @@ from dfv.view_stack import get_view_fn_call_stack_from_request
 VIEW_FN = TypeVar("VIEW_FN", bound=Callable[..., HttpResponse])
 
 
-class ViewResponse(wrapt.ObjectProxy):
+class ViewResponse(wrapt.ObjectProxy, HttpResponse):
     # def __init__(self, response: HttpResponse | None):
     #     if response is not None:
     #         content = response_to_str(response)

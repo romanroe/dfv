@@ -5,7 +5,7 @@ from django.template.response import TemplateResponse
 from django.test import RequestFactory
 
 from dfv import element, ElementResponse
-from dfv.element import ElementRequest
+from dfv.element import ElementMeta
 from dfv.utils import response_to_str
 
 
@@ -56,10 +56,10 @@ def test_element_return_another_element(rf: RequestFactory):
 
 def test_element_return_element_response(rf: RequestFactory):
     @element("unused")
-    def viewfn(request):
-        el = ElementRequest(request)
-        el.element_id = "override"
-        return ElementResponse.wrap_element_response(el, HttpResponse("body"))
+    def viewfn(_request):
+        return ElementResponse.wrap(
+            HttpResponse("body"), ElementMeta(element_id="override")
+        )
 
     result = viewfn(rf.get("/"))
     parsed: lxml.html.HtmlElement = lxml.html.fromstring(response_to_str(result))

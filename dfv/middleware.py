@@ -10,9 +10,12 @@ class DFVMiddleware:
 
     def __call__(self, request) -> HttpResponse:
         response: HttpResponse = self.get_response(request)
-        if response is not None and not response.streaming:
+        if (
+            response is not None
+            and not response.streaming
+            and response["Content-Type"].startswith("text/html")
+        ):
             response = process_response(request, response)
-
             content = response_to_str(response)
             bcontent = bytes(content, "UTF-8")
             dfv_swap_oob = getattr(response, "_dfv_swap_oob", [])
