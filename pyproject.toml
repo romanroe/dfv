@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dfv"
-version = "0.35.0"
+version = "0.36.0"
 description = "Django Function Views"
 authors = ["Roman Roelofsen <romanroe@gmail.com>"]
 license = "MIT"
@@ -12,7 +12,7 @@ include = ["dfv"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-django = "5.0.1,<6,>=4"
+django = ">=4,<6"
 django-htmx = "^1.14.0"
 lxml = "^4.9.2"
 wrapt = "^1.15.0"
