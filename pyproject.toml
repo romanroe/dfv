@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dfv"
-version = "0.36.0"
+version = "0.37.0"
 description = "Django Function Views"
 authors = ["Roman Roelofsen <romanroe@gmail.com>"]
 license = "MIT"

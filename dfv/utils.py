@@ -1,6 +1,6 @@
 from typing import Any
 
-from django.http import HttpRequest, HttpResponse, QueryDict
+from django.http import HttpRequest, HttpResponseBase, QueryDict
 from django.template.response import TemplateResponse
 from django.utils.safestring import mark_safe, SafeString
 
@@ -16,7 +16,7 @@ def _get_request_from_args(args: list[Any]) -> HttpRequest:
     return args[0]
 
 
-def response_to_str(response: HttpResponse | TemplateResponse) -> SafeString:
+def response_to_str(response: HttpResponseBase | TemplateResponse) -> SafeString:
     if isinstance(response, TemplateResponse):
         response = response.render()
 

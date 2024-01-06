@@ -2,7 +2,7 @@ import functools
 from dataclasses import dataclass, field
 from typing import Any, Callable, cast, Optional
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseBase
 from django_htmx.http import reswap, retarget
 
 from dfv.utils import response_to_str
@@ -55,7 +55,7 @@ class ElementResponse(ViewResponse):
         return ElementResponse(HttpResponse())
 
     @staticmethod
-    def wrap(response: HttpResponse, meta: ElementMeta) -> HttpResponse:
+    def wrap(response: HttpResponseBase, meta: ElementMeta) -> HttpResponseBase:
         if meta.nowrap:
             return response
 
@@ -73,7 +73,7 @@ class ElementResponse(ViewResponse):
 
         return ElementResponse(response)
 
-    def __init__(self, response: HttpResponse):
+    def __init__(self, response: HttpResponseBase):
         super().__init__(response)
 
 
@@ -103,11 +103,20 @@ def element(
         )(f)
 
         @functools.wraps(f)
-        def inner(*args, **kwargs) -> HttpResponse:
+        def inner(*args, **kwargs) -> HttpResponseBase:
             request: HttpRequest = args[0]
             response = f(request, *args[1:], **kwargs)
 
+            if not isinstance(response, HttpResponseBase):
+                raise TypeError(
+                    f"View function {f.__name__} returned {type(response)}, "
+                    f"expected HttpResponseBase"
+                )
+
             if not response["Content-Type"].startswith("text/html"):
+                return response
+
+            if isinstance(response, HttpResponse) and response.streaming:
                 return response
 
             if isinstance(response, ElementResponse):

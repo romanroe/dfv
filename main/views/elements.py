@@ -3,7 +3,7 @@ from datetime import datetime
 from django.http import HttpRequest
 from django.shortcuts import render
 
-from dfv import element, is_post, param, view
+from dfv import element, is_post, view
 from dfv.element import body_response
 from dfv.htmx import swap_oob
 from dfv.route import create_path
@@ -39,7 +39,7 @@ def level2_element(request: HttpRequest, source="level2"):
 def level3a_element(
     request: HttpRequest,
     source="level3a",
-    action=param(""),
+    # action=param("", consume=False),
 ):
     response = render(
         request,
@@ -51,20 +51,41 @@ def level3a_element(
         },
     )
 
-    if is_post(request):
-        match action:
-            case "page":
-                return body_response(level1_page(request))
-            case "2":
-                return swap_oob(
-                    response, level2_element(request, source="level3a_element")
-                )
-            case "3a_3b":
-                return swap_oob(
-                    response, level3b_element(request, source="level3a_element")
-                )
-            case "replace":
-                return level3b_element(request, "replace")
+    # actions = Actions(request)
+    #
+    # @actions.add
+    # def action_page(_):
+    #     return body_response(level1_page(request))
+    #
+    # if actions.matched():
+    #     return actions.value
+
+    match is_post(request), request.POST:
+        case True, {"action_page": _}:
+            return body_response(level1_page(request))
+        case True, {"action": "2"}:
+            return swap_oob(response, level2_element(request, source="level3a_element"))
+        case True, {"action": "3a_3b"}:
+            return swap_oob(
+                response, level3b_element(request, source="level3a_element")
+            )
+        case True, {"action": "replace"}:
+            return level3b_element(request, "replace")
+
+    # if is_post(request):
+    #     match action:
+    # case "page":
+    #     return body_response(level1_page(request))
+    # case "2":
+    #     return swap_oob(
+    #         response, level2_element(request, source="level3a_element")
+    #     )
+    # case "3a_3b":
+    #     return swap_oob(
+    #         response, level3b_element(request, source="level3a_element")
+    #     )
+    # case "replace":
+    #     return level3b_element(request, "replace")
 
     return response
 
